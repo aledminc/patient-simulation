@@ -1,0 +1,29 @@
+{
+  "name": "ai-patient-simulator",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build && node scripts/finalize-service-worker.mjs",
+    "models:mirror": "node scripts/mirror-models.mjs",
+    "test:models": "node scripts/smoke-real-models.mjs",
+    "test:models:production": "node scripts/smoke-real-models.mjs --production stt tts",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "verify": "npm run build && npm run test && npm run test:e2e"
+  },
+  "dependencies": {
+    "@huggingface/transformers": "4.3.2",
+    "@mlc-ai/web-llm": "0.2.89",
+    "hash-wasm": "4.13.0",
+    "@uzen/kokoro-js": "1.2.4"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "vite": "8.3.8",
+    "vitest": "5.1.0"
+  }
+}
