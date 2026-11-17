@@ -1,0 +1,19 @@
+{
+  "name": "AI Patient Simulator",
+  "short_name": "Patient Sim",
+  "description": "Private, browser-only communication practice with fictional patients.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f2f5f6",
+  "theme_color": "#0d6b70",
+  "icons": [
+    {
+      "src": "/icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+
