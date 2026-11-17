@@ -1,0 +1,31 @@
+{
+  "schemaVersion": 1,
+  "mode": "mock",
+  "description": "Harness validation only. Results are not model benchmarks.",
+  "runsPerPlan": 1,
+  "pipelineRuns": 20,
+  "warmupRuns": 1,
+  "timeoutSeconds": 30,
+  "memorySampleIntervalMs": 25,
+  "plansFile": "response_plans.json",
+  "llm": [
+    {
+      "name": "mock-qwen3-1.7b-q4",
+      "maxTokens": 60,
+      "contextTokens": 1024
+    }
+  ],
+  "stt": [
+    {
+      "name": "mock-whisper-base.en",
+      "expectedTranscript": "Can you tell me when the dizziness started?"
+    }
+  ],
+  "tts": [
+    {
+      "name": "mock-kokoro-int8",
+      "sampleRate": 24000
+    }
+  ]
+}
+

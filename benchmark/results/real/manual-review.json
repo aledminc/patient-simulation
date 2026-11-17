@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "resultGeneratedAt": "2026-11-17T18:45:07.499969+00:00",
+  "reviewer": "Codex manual inspection of all 70 raw patient replies",
+  "status": "fail",
+  "summary": "Both candidate LLMs produced clinically unauthorized additions or patient-role failures.",
+  "rationale": "The zero-unauthorized-facts requirement cannot be approved from lexical checks alone. Manual inspection found material failures in both models even after raw learner text was removed from the phrasing prompt.",
+  "concerns": [
+    "Qwen3 1.7B frequently adopted clinician/assistant language, exposed response-planning language, used third person, or generated malformed and truncated replies.",
+    "Qwen3 4B was more natural but invented symptoms, negative findings, prior medication context, work details, recovery timing, and symptom changes that the controller did not authorize.",
+    "Neither tested model can currently be trusted as a free-form phrasing layer under the zero-unauthorized-facts acceptance criterion.",
+    "The 30-token minimum is poorly matched to brief patient answers and encourages filler; retain a 60-token maximum and evaluate natural minimum length by plan type instead."
+  ],
+  "representativeFindings": [
+    {"model":"qwen3-1.7b-q4_k_m","planId":"direct-01","issues":["role_break","malformed"],"detail":"Produced analysis text beginning 'Okay, let's see' instead of a patient reply."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"direct-03","issues":["clinician_voice","unauthorized_advice"],"detail":"Said it wanted to support the learner and discuss ways to manage symptoms."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"vague-04","issues":["unauthorized_fact"],"detail":"Invented a need to make money while waiting."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"vague-05","issues":["role_break","medical_advice"],"detail":"Refused medical advice and referred the learner to a healthcare professional."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"empathy-02","issues":["clinician_voice"],"detail":"Apologized for dismissing the learner and offered further help."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"jargon-05","issues":["planning_leak"],"detail":"Said it needed to clarify its response plan."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"repeat-05","issues":["third_person"],"detail":"Referred to the patient as 'he' instead of speaking in first person."},
+    {"model":"qwen3-1.7b-q4_k_m","planId":"diagnosis-04","issues":["clinician_voice"],"detail":"Tried to redirect constructively and asked how it could assist."},
+    {"model":"qwen3-4b-q4_k_m","planId":"direct-01","issues":["unauthorized_fact"],"detail":"Invented shakiness, lightheadedness, and symptom tracking."},
+    {"model":"qwen3-4b-q4_k_m","planId":"direct-03","issues":["unauthorized_negative_finding"],"detail":"Claimed there were no other symptoms."},
+    {"model":"qwen3-4b-q4_k_m","planId":"direct-05","issues":["unauthorized_fact"],"detail":"Invented uncertainty about whether the medicine worked and implied a prior medicine."},
+    {"model":"qwen3-4b-q4_k_m","planId":"vague-01","issues":["unauthorized_fact"],"detail":"Introduced standing as a trigger even though only onset was authorized."},
+    {"model":"qwen3-4b-q4_k_m","planId":"empathy-01","issues":["unauthorized_fact"],"detail":"Added being alone and not wanting to rely on others."},
+    {"model":"qwen3-4b-q4_k_m","planId":"empathy-04","issues":["unauthorized_fact"],"detail":"Invented full-time work status and a return-to-work date next week."},
+    {"model":"qwen3-4b-q4_k_m","planId":"repeat-05","issues":["unauthorized_fact"],"detail":"Invented stiffness and characterized the injury as not too bad."}
+  ]
+}
+

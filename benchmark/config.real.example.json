@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "mode": "real",
+  "description": "Copy to config.real.json and replace every CHANGE_ME path.",
+  "runsPerPlan": 1,
+  "pipelineRuns": 20,
+  "warmupRuns": 1,
+  "timeoutSeconds": 30,
+  "memorySampleIntervalMs": 25,
+  "plansFile": "response_plans.json",
+  "llm": [
+    {
+      "name": "qwen3-1.7b-q4_k_m",
+      "executable": "C:/CHANGE_ME/llama-server.exe",
+      "model": "C:/CHANGE_ME/Qwen3-1.7B-Q4_K_M.gguf",
+      "port": 18101,
+      "threads": 8,
+      "batchThreads": 8,
+      "contextTokens": 1024,
+      "maxTokens": 60,
+      "temperature": 0.7,
+      "topP": 0.8,
+      "topK": 20,
+      "chatTemplate": "qwen3_nonthinking.jinja",
+      "extraArgs": ["-ngl", "0", "--reasoning", "off"]
+    },
+    {
+      "name": "qwen3-4b-q4_k_m",
+      "enabled": true,
+      "executable": "C:/CHANGE_ME/llama-server.exe",
+      "model": "C:/CHANGE_ME/Qwen3-4B-Q4_K_M.gguf",
+      "port": 18102,
+      "threads": 8,
+      "batchThreads": 8,
+      "contextTokens": 1024,
+      "maxTokens": 60,
+      "temperature": 0.7,
+      "topP": 0.8,
+      "topK": 20,
+      "chatTemplate": "qwen3_nonthinking.jinja",
+      "extraArgs": ["-ngl", "0", "--reasoning", "off"]
+    }
+  ],
+  "stt": [
+    {
+      "name": "whisper-base.en-q5_1",
+      "executable": "C:/CHANGE_ME/whisper-server.exe",
+      "model": "C:/CHANGE_ME/ggml-base.en-q5_1.bin",
+      "port": 18201,
+      "threads": 8,
+      "audioFiles": [
+        {
+          "path": "fixtures/question-01.wav",
+          "expectedTranscript": "Can you tell me when the dizziness started, and what makes it worse?"
+        }
+      ],
+      "extraArgs": []
+    },
+    {
+      "name": "whisper-tiny.en-q5_1",
+      "enabled": true,
+      "executable": "C:/CHANGE_ME/whisper-server.exe",
+      "model": "C:/CHANGE_ME/ggml-tiny.en-q5_1.bin",
+      "port": 18202,
+      "threads": 8,
+      "audioFiles": [
+        {
+          "path": "fixtures/question-01.wav",
+          "expectedTranscript": "Can you tell me when the dizziness started, and what makes it worse?"
+        }
+      ],
+      "extraArgs": []
+    }
+  ],
+  "tts": [
+    {
+      "name": "kokoro-v1.0-int8",
+      "python": "C:/CHANGE_ME/.venv/Scripts/python.exe",
+      "model": "C:/CHANGE_ME/kokoro-v1.0.int8.onnx",
+      "voices": "C:/CHANGE_ME/voices-v1.0.bin",
+      "voice": "af_sarah",
+      "speed": 1.0,
+      "language": "en-us",
+      "threads": 8
+    }
+  ]
+}
+

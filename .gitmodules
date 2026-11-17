@@ -1,0 +1,10 @@
+[submodule "benchmark/vendor/llama.cpp"]
+	path = benchmark/vendor/llama.cpp
+	url = https://github.com/ggml-org/llama.cpp.git
+	ignore = untracked
+	shallow = true
+[submodule "benchmark/vendor/whisper.cpp"]
+	path = benchmark/vendor/whisper.cpp
+	url = https://github.com/ggml-org/whisper.cpp.git
+	ignore = untracked
+	shallow = true

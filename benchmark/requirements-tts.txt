@@ -1,0 +1,5 @@
+# Install this only in a Python 3.10-3.13 environment.
+kokoro-onnx==0.6.1
+numpy>=2.0.2
+psutil>=6.0,<8
+

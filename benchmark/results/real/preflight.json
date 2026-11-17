@@ -1,0 +1,99 @@
+{
+  "generatedAt": "2026-11-17T18:36:56.872179+00:00",
+  "config": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\config.real.json",
+  "preflight": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "responsePlans",
+        "ok": true,
+        "count": 35,
+        "categories": {
+          "direct_factual": 5,
+          "vague_question": 5,
+          "empathy": 5,
+          "jargon": 5,
+          "repeated_question": 5,
+          "prompt_injection": 5,
+          "hidden_diagnosis_request": 5
+        }
+      },
+      {
+        "name": "llm:qwen3-1.7b-q4_k_m:executable",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\\llama-server.exe"
+      },
+      {
+        "name": "llm:qwen3-1.7b-q4_k_m:model",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\Qwen_Qwen3-1.7B-Q4_K_M.gguf"
+      },
+      {
+        "name": "llm:qwen3-1.7b-q4_k_m:hardNonThinkingTemplate",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\qwen3_nonthinking.jinja"
+      },
+      {
+        "name": "llm:qwen3-4b-q4_k_m:executable",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\AppData\\Local\\Microsoft\\WinGet\\Packages\\ggml.llamacpp_Microsoft.Winget.Source_8wekyb3d8bbwe\\llama-server.exe"
+      },
+      {
+        "name": "llm:qwen3-4b-q4_k_m:model",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\Qwen3-4B-Q4_K_M.gguf"
+      },
+      {
+        "name": "llm:qwen3-4b-q4_k_m:hardNonThinkingTemplate",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\qwen3_nonthinking.jinja"
+      },
+      {
+        "name": "stt:whisper-base.en-q5_1:executable",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\vendor\\whisper.cpp\\build\\bin\\Release\\whisper-server.exe"
+      },
+      {
+        "name": "stt:whisper-base.en-q5_1:model",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\ggml-base.en-q5_1.bin"
+      },
+      {
+        "name": "stt:whisper-tiny.en-q5_1:executable",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\vendor\\whisper.cpp\\build\\bin\\Release\\whisper-server.exe"
+      },
+      {
+        "name": "stt:whisper-tiny.en-q5_1:model",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\ggml-tiny.en-q5_1.bin"
+      },
+      {
+        "name": "stt:whisper-base.en-q5_1:fixture",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\fixtures\\question-01.wav"
+      },
+      {
+        "name": "stt:whisper-tiny.en-q5_1:fixture",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\fixtures\\question-01.wav"
+      },
+      {
+        "name": "tts:kokoro-v1.0-int8:python",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\.venv\\Scripts\\python.exe"
+      },
+      {
+        "name": "tts:kokoro-v1.0-int8:model",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\kokoro-v1.0.int8.onnx"
+      },
+      {
+        "name": "tts:kokoro-v1.0-int8:voices",
+        "ok": true,
+        "path": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\models\\voices-v1.0.bin"
+      }
+    ],
+    "errors": []
+  }
+}

@@ -1,0 +1,29 @@
+{
+  "generatedAt": "2026-11-17T17:53:07.614145+00:00",
+  "config": "C:\\Users\\alexa\\OneDrive\\Desktop\\ai-patient-simulator\\benchmark\\config.mock.json",
+  "preflight": {
+    "ok": true,
+    "checks": [
+      {
+        "name": "responsePlans",
+        "ok": true,
+        "count": 35,
+        "categories": {
+          "direct_factual": 5,
+          "vague_question": 5,
+          "empathy": 5,
+          "jargon": 5,
+          "repeated_question": 5,
+          "prompt_injection": 5,
+          "hidden_diagnosis_request": 5
+        }
+      },
+      {
+        "name": "mockMode",
+        "ok": true,
+        "note": "No model or native binary is loaded; measurements are harness-only."
+      }
+    ],
+    "errors": []
+  }
+}

@@ -1,0 +1,80 @@
+{
+  "generatedAt": "2026-11-17T18:52:00-05:00",
+  "runtime": {
+    "llamaServer": {
+      "source": "winget ggml.llamacpp b12457",
+      "version": "1.0.0-dev build 12457",
+      "commit": "ad5cbfa91",
+      "sha256": "068F2471287E9904801BF63909B83C789819BE9591E737F1D31203E15E0C75E6"
+    },
+    "whisperServer": {
+      "source": "locally compiled ggml-org/whisper.cpp",
+      "commit": "8302b819fc3096c03cedbc91ef1fe982cc6ebb77",
+      "sha256": "D70BE30BB2735310A41DF31E47B0C9CBAC4DECC45AB18364AF175E979588D14E"
+    },
+    "python": "3.12.10",
+    "pythonPackages": {
+      "kokoro-onnx": "0.6.1",
+      "onnxruntime": "1.32.0",
+      "numpy": "2.5.5",
+      "psutil": "7.2.2"
+    }
+  },
+  "models": [
+    {
+      "name": "Qwen3 1.7B Q4_K_M",
+      "file": "Qwen_Qwen3-1.7B-Q4_K_M.gguf",
+      "bytes": 1282439584,
+      "source": "bartowski/Qwen_Qwen3-1.7B-GGUF",
+      "sourceRevision": "dcb19155b962dbb6389f4691a982043a8e651022",
+      "sha256": "72C5C3CB38FA32D5256E2FE30D03E7A64C6C79E668AD84057E3BD66E250B24FB"
+    },
+    {
+      "name": "Qwen3 4B Q4_K_M",
+      "file": "Qwen3-4B-Q4_K_M.gguf",
+      "bytes": 2497280256,
+      "source": "Qwen/Qwen3-4B-GGUF",
+      "sourceRevision": "bc640142c66e1fdd12af0bd68f40445458f3869b",
+      "sha256": "7485FE6F11AF29433BC51CAB58009521F205840F5B4AE3A32FA7F92E8534FDF5"
+    },
+    {
+      "name": "Whisper base.en Q5_1",
+      "file": "ggml-base.en-q5_1.bin",
+      "bytes": 59721011,
+      "source": "ggerganov/whisper.cpp",
+      "sourceRevision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "4BAF70DD0D7C4247BA2B81FAFD9C01005AC77C2F9EF064E00DCF195D0E2FDD2F"
+    },
+    {
+      "name": "Whisper tiny.en Q5_1",
+      "file": "ggml-tiny.en-q5_1.bin",
+      "bytes": 32166155,
+      "source": "ggerganov/whisper.cpp",
+      "sourceRevision": "5359861c739e955e79d9a303bcbc70fb988958b1",
+      "sha256": "C77C5766F1CEF09B6B7D47F21B546CBDDD4157886B3B5D6D4F709E91E66C7C2B"
+    },
+    {
+      "name": "Kokoro v1.0 INT8",
+      "file": "kokoro-v1.0.int8.onnx",
+      "bytes": 92361271,
+      "source": "thewh1teagle/kokoro-onnx release model-files-v1.0",
+      "sha256": "6E742170D309016E5891A994E1CE1559C702A2CCD0075E67EF7157974F6406CB"
+    },
+    {
+      "name": "Kokoro voices v1.0",
+      "file": "voices-v1.0.bin",
+      "bytes": 28214398,
+      "source": "thewh1teagle/kokoro-onnx release model-files-v1.0",
+      "sha256": "BCA610B8308E8D99F32E6FE4197E7EC01679264EFED0CAC9140FE9C29F1FBF7"
+    }
+  ],
+  "fixture": {
+    "file": "question-01.wav",
+    "type": "synthetic Kokoro speech, not a microphone recording",
+    "sampleRate": 16000,
+    "channels": 1,
+    "seconds": 3.157,
+    "sha256": "CF3FFC29C6E09DEFAACD1BE7566CF7B5BEEE360B0B2E7D0B2CB2D90C30E65FF0"
+  }
+}
+
