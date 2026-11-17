@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>AI Patient Simulator</title>
+<meta name="description" content="Practice patient communication with fictional AI patients and get structured feedback.">
+<meta name="theme-color" content="#0D6B70">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+<style>
+/* Layout: a clinic-workstation shell — header with the 6-step workflow rail, one working panel below that swaps per step. */
+:root{
+  --bg:#F2F5F6; --surface:#FFFFFF; --sunk:#E6ECEE; --ink:#13232B; --muted:#55656D; --line:#D2DCE0;
+  --accent:#0D6B70; --accent-ink:#FFFFFF; --accent-soft:#D6EBEB;
+  --warm:#A65B08; --warm-soft:#F7E8D4;
+  --good:#2C7439; --good-soft:#DDEFE0; --bad:#A93535; --bad-soft:#F6DEDE;
+  --f-display:"Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0D1518; --surface:#152226; --sunk:#1C2C31; --ink:#E3ECEE; --muted:#98A9AF; --line:#293B41;
+  --accent:#53B6B9; --accent-ink:#052527; --accent-soft:#163B3D;
+  --warm:#E8A452; --warm-soft:#3A2913;
+  --good:#79C989; --good-soft:#1B3522; --bad:#EE8686; --bad-soft:#3E1F1F; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0D1518; --surface:#152226; --sunk:#1C2C31; --ink:#E3ECEE; --muted:#98A9AF; --line:#293B41;
+  --accent:#53B6B9; --accent-ink:#052527; --accent-soft:#163B3D;
+  --warm:#E8A452; --warm-soft:#3A2913;
+  --good:#79C989; --good-soft:#1B3522; --bad:#EE8686; --bad-soft:#3E1F1F; color-scheme:dark}
+
+*{box-sizing:border-box}
+html{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:16px;line-height:1.55;
+  padding-left:max(16px, env(safe-area-inset-left, 0px));padding-right:max(16px, env(safe-area-inset-right, 0px));padding-block:20px 48px}
+.app{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:20px}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.2}
+h1{font-size:1.6rem;font-weight:700;letter-spacing:-.01em}
+h2{font-size:1.35rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.label{font-family:var(--f-mono);font-size:.72rem;text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
+button{font:inherit;cursor:pointer}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px;border-radius:6px}
+
+/* header */
+.top{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+.brand{display:flex;flex-direction:column;gap:2px}
+.mode{display:inline-flex;align-items:center;gap:8px;font-size:.82rem;color:var(--muted);border:1px solid var(--line);border-radius:999px;padding:4px 12px;background:var(--surface)}
+.mode i{width:8px;height:8px;border-radius:50%;background:var(--muted);display:inline-block}
+.mode.live i{background:var(--good)} .mode.off i{background:var(--warm)}
+
+/* workflow rail */
+.rail{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px}
+.rail li{display:flex;flex-direction:column;gap:6px;font-size:.8rem;color:var(--muted);min-width:0}
+.rail .bar{height:5px;border-radius:3px;background:var(--line)}
+.rail li.done .bar{background:var(--accent);opacity:.45}
+.rail li.on{color:var(--ink);font-weight:700}
+.rail li.on .bar{background:var(--accent)}
+.rail li.fb.on .bar{background:var(--warm)}
+.rail .n{font-family:var(--f-mono);margin-right:4px}
+.loopnote{font-size:.78rem;color:var(--muted);margin-top:-12px}
+@media (max-width:640px){.rail .t{display:none}.rail li.on .t{display:inline}}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:24px}
+@media (max-width:560px){.panel{padding:18px}}
+
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:10px;padding:10px 16px;font-weight:700}
+.btn:hover{background:var(--sunk)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.warm{background:var(--warm);border-color:var(--warm);color:var(--surface)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btnrow{display:flex;flex-wrap:wrap;gap:10px}
+.link{background:none;border:none;color:var(--accent);padding:0;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+
+.chip{display:inline-block;font-size:.74rem;font-weight:700;padding:3px 9px;border-radius:999px;background:var(--accent-soft);color:var(--accent)}
+.chip.base{background:var(--good-soft);color:var(--good)}
+.chip.emo{background:var(--bad-soft);color:var(--bad)}
+.chip.cult{background:var(--warm-soft);color:var(--warm)}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+
+/* step 1: scenario cards */
+.pickhead{display:flex;flex-direction:column;gap:6px;margin-bottom:18px;max-width:65ch}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:14px}
+.card{text-align:left;border:1px solid var(--line);background:var(--bg);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:12px;color:var(--ink)}
+.card:hover{border-color:var(--accent)}
+.who{display:flex;gap:12px;align-items:center}
+.av{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-display);font-weight:700;color:#fff;font-size:1rem}
+.vitals{display:flex;flex-wrap:wrap;gap:4px 14px;font-family:var(--f-mono);font-size:.78rem;color:var(--muted)}
+.vitals b{color:var(--ink);font-weight:500}
+
+/* step 2: intro */
+.intro{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:24px}
+@media (max-width:760px){.intro{grid-template-columns:1fr}}
+.intro .body{display:flex;flex-direction:column;gap:14px;max-width:65ch}
+.chart{background:var(--sunk);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:10px;font-size:.9rem}
+.chart dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:4px 14px}
+.chart dt{font-family:var(--f-mono);font-size:.75rem;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding-top:2px}
+.chart dd{margin:0;font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+.challenge{border-left:4px solid var(--accent);padding:4px 0 4px 14px}
+.tips{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px;color:var(--muted)}
+
+/* steps 3-4: chat */
+.chatwrap{display:grid;grid-template-columns:260px minmax(0,1fr);gap:20px}
+@media (max-width:820px){.chatwrap{grid-template-columns:1fr}}
+.side{display:flex;flex-direction:column;gap:14px}
+.demeanor{display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:10px;background:var(--sunk)}
+.dm{font-family:var(--f-display);font-weight:700;font-size:1.1rem;text-transform:capitalize}
+.dm.calm,.dm.relaxed,.dm.relieved{color:var(--good)}
+.dm.anxious,.dm.frustrated,.dm.upset,.dm.tearful{color:var(--bad)}
+.dm.guarded,.dm.confused,.dm.hesitant{color:var(--warm)}
+.convo{display:flex;flex-direction:column;border:1px solid var(--line);border-radius:12px;background:var(--bg);min-width:0}
+.log{display:flex;flex-direction:column;gap:12px;padding:16px;height:min(56vh,520px);overflow-y:auto}
+.setting{font-size:.88rem;color:var(--muted);font-style:italic;text-align:center;padding:4px 12px}
+.msg{max-width:82%;display:flex;flex-direction:column;gap:3px}
+.msg .bubble{padding:10px 14px;border-radius:14px;white-space:pre-wrap;overflow-wrap:anywhere}
+.msg.me{align-self:flex-end}
+.msg.me .bubble{background:var(--accent);color:var(--accent-ink);border-bottom-right-radius:4px}
+.msg.pt{align-self:flex-start}
+.msg.pt .bubble{background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:4px}
+.msg .cue{font-size:.82rem;font-style:italic;color:var(--muted);padding:0 4px}
+.msg .who2{font-size:.72rem;color:var(--muted);padding:0 4px;font-family:var(--f-mono)}
+.msg.me .who2{text-align:right}
+.typing{align-self:flex-start;color:var(--muted);font-size:.88rem;font-style:italic}
+.err{align-self:stretch;background:var(--bad-soft);color:var(--bad);border-radius:10px;padding:10px 14px;font-size:.9rem;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.compose{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);align-items:flex-end}
+.compose textarea{flex:1;min-width:0;resize:none;border:1px solid var(--line);border-radius:10px;padding:10px 12px;font:inherit;background:var(--surface);color:var(--ink);min-height:46px;max-height:140px}
+.starters{display:flex;flex-wrap:wrap;gap:6px;padding:0 12px 12px}
+.starter{border:1px dashed var(--line);background:transparent;color:var(--muted);border-radius:999px;padding:4px 10px;font-size:.8rem}
+.starter:hover{color:var(--ink);border-color:var(--accent)}
+
+/* step 5: feedback */
+.fbhead{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;align-items:flex-start;margin-bottom:20px}
+.fbsections{display:flex;flex-direction:column;gap:0;counter-reset:fb}
+.fbsec{display:grid;grid-template-columns:40px minmax(0,1fr);gap:14px;padding:16px 0;border-top:1px solid var(--line)}
+.fbsec .num{font-family:var(--f-mono);font-size:.9rem;color:var(--warm);font-weight:500;padding-top:2px}
+.fbsec ul{margin:8px 0 0;padding-left:18px;display:flex;flex-direction:column;gap:8px;max-width:70ch}
+.fbsec p{max-width:70ch}
+.quote{display:block;color:var(--muted);font-style:italic;font-size:.92rem}
+.loading{display:flex;flex-direction:column;gap:8px;align-items:flex-start;padding:24px 0}
+.pulse{width:120px;height:6px;border-radius:3px;background:linear-gradient(90deg,var(--line),var(--warm),var(--line));background-size:200% 100%;animation:pulse 1.4s linear infinite}
+@keyframes pulse{to{background-position:-200% 0}}
+@media (prefers-reduced-motion: reduce){.pulse{animation:none;background:var(--warm)}}
+details.transcript{margin-top:18px;border-top:1px solid var(--line);padding-top:14px}
+details.transcript summary{cursor:pointer;font-weight:700}
+.tx{display:flex;flex-direction:column;gap:6px;margin-top:10px;font-size:.92rem}
+.tx b{font-family:var(--f-mono);font-size:.75rem;font-weight:500;color:var(--muted);margin-right:6px}
+.note{font-size:.85rem;color:var(--muted)}
+.next{background:var(--warm-soft);border-radius:10px;padding:14px 16px}
+
+/* generator + library */
+.section{display:flex;flex-direction:column;gap:14px;padding-top:24px;margin-top:24px;border-top:1px solid var(--line)}
+.sechead{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:baseline;justify-content:space-between}
+.gen{background:var(--accent-soft);border-radius:12px;padding:18px;display:flex;flex-direction:column;gap:14px}
+.genrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,170px),1fr));gap:10px}
+.field{display:flex;flex-direction:column;gap:4px;min-width:0}
+select,input[type=search]{font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+.genstatus{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:.92rem}
+.small{font-size:.85rem}
+.card .meta{font-size:.76rem;color:var(--muted);font-family:var(--f-mono)}
+.empty{border:1px dashed var(--line);border-radius:12px;padding:18px;color:var(--muted)}
+.chip.new{background:var(--warm-soft);color:var(--warm)}
+.toast{font-size:.88rem;color:var(--good)}
+.toast.bad{color:var(--bad)}
+.linkbox{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.linkbox input{flex:1;min-width:0;font-family:var(--f-mono);font-size:.8rem;border:1px solid var(--line);border-radius:8px;padding:7px 9px;background:var(--surface);color:var(--ink)}
+button.mode{cursor:pointer;font:inherit;font-size:.82rem}
+button.mode:hover{border-color:var(--accent);color:var(--ink)}
+.settings{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:14px;margin-top:14px}
+.setcard{border:1px solid var(--line);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.setcard h3{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.setcard input[type=password]{font:inherit;border:1px solid var(--line);border-radius:10px;padding:9px 10px;background:var(--surface);color:var(--ink);width:100%}
+.capgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-top:12px}
+.capitem{background:var(--sunk);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px}
+.modelrow{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;border-top:1px solid var(--line);padding-top:10px}
+.modelrow:first-of-type{border-top:0;padding-top:0}
+.modelprogress{height:6px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:5px}.modelprogress span{display:block;height:100%;background:var(--accent)}
+.voicebar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:10px 12px;border-top:1px solid var(--line);background:var(--surface)}
+.voicebar .small{margin-right:auto}.recording{color:var(--bad);font-weight:700}
+.progress{height:8px;border-radius:4px;background:var(--line);overflow:hidden}
+.progress span{display:block;height:100%;background:var(--accent);transition:width .3s}
+.banner{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;background:var(--sunk);border-radius:12px;padding:14px 16px;margin-bottom:18px}
+.banner p{max-width:60ch}
+.done{display:flex;flex-direction:column;gap:14px;align-items:flex-start;max-width:60ch}
+.foot{font-size:.82rem;color:var(--muted);max-width:75ch}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <div class="brand">
+      <span class="label">Communication practice · prototype</span>
+      <h1>Interactive AI Patient Simulator</h1>
+    </div>
+    <button class="mode" id="mode" aria-controls="enginePanel"><i></i><span id="modeText">AI settings</span></button>
+  </header>
+
+  <ol class="rail" id="rail" aria-label="Workflow steps">
+    <li data-s="1"><span class="bar"></span><span><span class="n">1</span><span class="t">Choose scenario</span></span></li>
+    <li data-s="2"><span class="bar"></span><span><span class="n">2</span><span class="t">Review intro</span></span></li>
+    <li data-s="3"><span class="bar"></span><span><span class="n">3</span><span class="t">You send a message</span></span></li>
+    <li data-s="4"><span class="bar"></span><span><span class="n">4</span><span class="t">Patient replies</span></span></li>
+    <li data-s="5" class="fb"><span class="bar"></span><span><span class="n">5</span><span class="t">Feedback summary</span></span></li>
+    <li data-s="6"><span class="bar"></span><span><span class="n">6</span><span class="t">Practice again or finish</span></span></li>
+  </ol>
+  <p class="loopnote" id="loopnote" hidden>Steps 3 and 4 repeat until you end the conversation.</p>
+
+  <section class="panel" id="enginePanel" hidden aria-label="AI settings"></section>
+  <main class="panel" id="view"></main>
+
+  <p class="foot">All patients are fictional. Your conversations stay in this browser tab and are never saved; leaving or reloading the page clears them. Saved patients are kept in this browser; share them with a link or a patient pack file. Feedback covers communication only, not diagnosis.</p>
+</div>
+
+<script type="module">
+import { BrowserRuntime, installGlobalErrorBoundary } from "/src/runtime/browser-runtime.js";
+import { formatBytes } from "/src/runtime/capabilities.js";
+import { createPatientState, planPatientTurn, validatePhrasedReply } from "/src/core/patient-controller.js";
+
+/* ---------------- Scenarios ---------------- */
+const SCENARIOS = [
+{
+  id:"maria", name:"Maria Alvarez", age:58, color:"#0D6B70", initials:"MA",
+  complaint:"Dizziness in the mornings",
+  tags:[["Incomplete information",""],["Anxiety","emo"]],
+  chart:[["Age","58"],["Visit","Walk-in clinic"],["BP","108/66 seated"],["HR","84 bpm"],["Temp","36.8 °C"]],
+  setting:"Maria sits on the edge of the chair, handbag held on her lap. Her daughter booked this visit.",
+  intro:"Maria has been feeling dizzy, mostly in the mornings. She came in because her daughter insisted. She seems anxious and keeps saying it is probably nothing.",
+  challenge:"Maria is hesitant to share personal information and downplays her symptoms. Build trust and use open, gentle questions to learn what is really going on.",
+  tips:["Start open: let her tell it her way.","Notice and name her worry.","Follow up when answers are vague."],
+  persona:"Maria Alvarez, 58, a retired school secretary. Warm but anxious and guarded. She keeps minimizing ('it's probably nothing', 'I don't want to make a fuss'). If pushed too fast or asked many closed questions, she gets more evasive and may change the subject to her daughter overreacting.",
+  start:"anxious",
+  facts:[
+    {id:"onset",label:"The dizziness started about three weeks ago.",keys:["when","start","how long","began","since"]},
+    {id:"med",label:"Her doctor started a new blood pressure pill about a month ago; she can't remember its name.",keys:["medic","pill","tablet","taking","prescri","drug"]},
+    {id:"standing",label:"It's worst when she gets out of bed or stands up quickly.",keys:["stand","get up","bed","worse","trigger","position"]},
+    {id:"fall",label:"She nearly fell in the bathroom last week and caught herself on the sink.",keys:["fall","fell","hurt","injur","accident","safe"]},
+    {id:"alone",label:"She has lived alone since her husband died two years ago.",keys:["live","home","alone","family","husband","support","anyone"]},
+    {id:"fear",label:"She is afraid a serious diagnosis will cost her driver's license and independence, which is why she downplays it.",keys:["worr","concern","afraid","scared","fear","feel about","on your mind","bother"]},
+    {id:"breakfast",label:"She often skips breakfast and only has coffee in the morning.",keys:["eat","food","breakfast","drink","diet","water","coffee"]}
+  ],
+  offline:{
+    greet:"Hello. Sorry, my daughter made this appointment. I really don't think it's anything.",
+    say:{onset:"Maybe… three weeks? Something like that.",med:"Well, the doctor gave me a new pill for my blood pressure. A month ago, maybe. I don't remember the name, it's a small white one.",standing:"It's mostly when I get out of bed. The room kind of tilts for a moment.",fall:"…Last week I almost fell in the bathroom. I grabbed the sink. I didn't tell my daughter that.",alone:"I live by myself. Since my husband passed, two years now.",fear:"If it's something serious they'll take my license, won't they? Then how do I get anywhere? That's what scares me.",breakfast:"Breakfast? Just coffee, usually. I'm not hungry in the morning."},
+    vague:["I just feel a bit off sometimes. It passes.","It's probably nothing, really.","I don't know… it comes and goes.","My daughter worries too much, honestly."],
+    empathy:"…Thank you. I guess I am a little nervous about it.",
+    jargon:"Sorry, I don't know what that means."
+  },
+  ladder:["relaxed","calm","guarded","anxious","upset"], startLevel:3,
+  recap:"Maria Alvarez, 58, has morning dizziness. She is anxious, downplays her symptoms and is hesitant to share personal details."
+},
+{
+  id:"tom", name:"Tom Becker", age:34, color:"#2C7439", initials:"TB",
+  complaint:"Twisted ankle",
+  tags:[["Baseline","base"]],
+  chart:[["Age","34"],["Visit","Urgent care"],["BP","124/78"],["HR","72 bpm"],["Pain","5/10"]],
+  setting:"Tom limps in and sits down, his left shoe unlaced. He gives you a friendly nod.",
+  intro:"Tom rolled his ankle playing soccer. He is relaxed, cooperative and answers questions directly.",
+  challenge:"A straightforward visit. Practice a complete, well-structured conversation: introduce yourself, gather the history, and explain next steps clearly.",
+  tips:["Introduce yourself and your role.","Cover the full story, not just the pain.","Close by checking what he understood."],
+  persona:"Tom Becker, 34, a warehouse supervisor. Friendly, calm, cooperative, a little joking. Answers questions directly and honestly but does not volunteer everything unprompted. Mostly wants to know when he can get back to work.",
+  start:"calm",
+  facts:[
+    {id:"how",label:"He rolled his ankle landing awkwardly at Sunday league soccer yesterday evening.",keys:["happen","how did","what happened","when","injur"]},
+    {id:"swell",label:"The ankle is swollen; he iced it and can walk, but with a limp.",keys:["swell","swollen","ice","walk","weight","bruis"]},
+    {id:"pain",label:"Pain is about 5/10 on the outside of the ankle.",keys:["pain","hurt","scale","where","sore"]},
+    {id:"prior",label:"He sprained the same ankle two years ago.",keys:["before","previous","history","again","past","prior"]},
+    {id:"meds",label:"He took 400 mg ibuprofen this morning.",keys:["medic","took","taking","painkiller","ibuprofen","pill"]},
+    {id:"work",label:"He is on his feet all day at work and wants to know when he can go back.",keys:["work","job","feet","back to"]}
+  ],
+  offline:{
+    greet:"Hey, thanks for seeing me. Think I did a number on my ankle.",
+    say:{how:"Sunday league last night. Went up for a header, came down on someone's foot and it rolled right over.",swell:"It's pretty swollen. I iced it last night. I can walk on it, just limping.",pain:"Outside of the ankle, here. I'd say a five out of ten.",prior:"Actually yeah, same ankle, about two years ago. Sprained it then too.",meds:"I took an ibuprofen this morning. 400, I think.",work:"I'm a warehouse supervisor, on my feet all day. When do you think I can go back?"},
+    vague:["Yeah, it's alright, just sore.","Sure, what else do you need to know?","Not much else to say, really."],
+    empathy:"Appreciate that. It's more annoying than anything.",
+    jargon:"Sorry, what does that mean in normal words?"
+  },
+  ladder:["relaxed","calm","calm","guarded","frustrated"], startLevel:1,
+  recap:"Tom Becker, 34, twisted his ankle playing soccer. A cooperative baseline patient for practicing a complete, structured conversation."
+},
+{
+  id:"lien", name:"Lien Tran", age:67, color:"#A65B08", initials:"LT",
+  complaint:"New type 2 diabetes result",
+  tags:[["Cultural & language","cult"],["Explaining information",""]],
+  chart:[["Age","67"],["Visit","Follow-up"],["HbA1c","7.9 %"],["Fasting glucose","8.4 mmol/L"],["Language","Vietnamese (first)"]],
+  setting:"Mrs. Tran sits upright with her hands folded. Her daughter usually comes with her but could not today.",
+  intro:"Mrs. Tran is back to hear her blood test results, which show type 2 diabetes. English is her second language and she is not familiar with medical terms.",
+  challenge:"Explain the diagnosis and next steps in plain language, respect her beliefs and family role, and check what she actually understood. She may say 'yes, yes' politely even when confused.",
+  tips:["Use plain words and short sentences.","Ask what she already knows or believes.","Ask her to explain it back in her own words."],
+  persona:"Lien Tran, 67, Vietnamese-born, English is her second language. Polite, respectful, soft-spoken. Uses short, simple sentences with occasional small grammar slips. Often says 'yes, yes' or nods even when she does not understand; reveals confusion only if asked to explain back or asked directly what she thinks. Medical jargon confuses her.",
+  start:"guarded",
+  facts:[
+    {id:"belief",label:"She thinks 'sugar disease' means she ate too many sweets, and she feels ashamed.",keys:["understand","know about","think","mean","believe","heard","sweet"]},
+    {id:"tea",label:"She drinks bitter melon tea her sister recommended and wants to keep doing so.",keys:["tea","herb","remed","natural","traditional","anything else","else you"]},
+    {id:"family",label:"She wants to talk with her daughter before agreeing to any treatment.",keys:["family","daughter","decide","decision","agree","support"]},
+    {id:"rice",label:"She eats white rice with every meal and fears she must give it up; rice matters at family meals.",keys:["eat","food","rice","diet","meal","cook"]},
+    {id:"kidney",label:"She worries pills will damage her kidneys, which a friend told her.",keys:["medic","pill","tablet","worr","concern","question","afraid"]},
+    {id:"symptoms",label:"She has been very thirsty and wakes at night to urinate.",keys:["thirst","drink","night","toilet","bathroom","urin","symptom","feel"]}
+  ],
+  offline:{
+    greet:"Hello, doctor. Yes. My daughter cannot come today, sorry.",
+    say:{belief:"Sugar disease… I eat too much sweet, yes? My fault. I am a little ashamed.",tea:"My sister say bitter melon tea is good for sugar. I drink every day. I can keep, yes?",family:"I need to talk with my daughter first. She help me decide these things.",rice:"I eat rice every meal. Every family dinner. I must stop rice? That is very hard.",kidney:"My friend say these pills hurt the kidney. I am worried about this.",symptoms:"Yes, I am thirsty all the time. At night I wake up many times for toilet."},
+    vague:["Yes, yes. Okay.","Yes… I understand.","Okay, doctor.","Mm. Yes."],
+    empathy:"Thank you. You are kind. It is a lot for me.",
+    jargon:"Sorry… I do not know this word. What is it?"
+  },
+  ladder:["relaxed","calm","guarded","confused","upset"], startLevel:2,
+  recap:"Lien Tran, 67, is learning she has type 2 diabetes. English is her second language, she has limited familiarity with medical terms, and she brings her own beliefs about the condition."
+},
+{
+  id:"daniel", name:"Daniel Reyes", age:45, color:"#A93535", initials:"DR",
+  complaint:"Abdominal pain after a long wait",
+  tags:[["Emotional distress","emo"],["Unexpected responses",""]],
+  chart:[["Age","45"],["Visit","Emergency dept."],["Wait time","3 h 10 min"],["BP","142/88"],["HR","96 bpm"]],
+  setting:"Daniel is pacing when you walk in. He checks his phone, then looks at you without sitting down.",
+  intro:"Daniel has waited more than three hours in the emergency department with stomach pain. He is frustrated, gives short answers, and feels nobody listens to him.",
+  challenge:"Acknowledge his frustration without getting defensive, rebuild trust, and still gather the history. His answers will open up if he feels heard.",
+  tips:["Acknowledge the wait before anything else.","Don't argue or over-explain the delay.","Ask about lifestyle without judgment."],
+  persona:"Daniel Reyes, 45, self-employed electrician. Frustrated and irritable after a 3-hour wait; short, curt answers at first, occasional sarcasm. Softens noticeably if the student sincerely acknowledges the wait and his frustration. Gets defensive if questions sound judgmental, especially about alcohol. May bring up unexpected concerns like his job tomorrow.",
+  start:"frustrated",
+  facts:[
+    {id:"where",label:"The pain is in the upper right belly, after eating, especially fatty food, and lasts a few hours.",keys:["where","pain","describe","eat","food","after","feel like"]},
+    {id:"duration",label:"It has come and gone for two months; last night was the worst.",keys:["how long","when","start","before","first","often"]},
+    {id:"vomit",label:"He vomited once last night.",keys:["nause","sick","vomit","throw","stomach"]},
+    {id:"dismissed",label:"A walk-in clinic told him last month it was 'just indigestion' and he feels nobody listens.",keys:["seen","doctor","clinic","told","anyone","previous","last time"]},
+    {id:"job",label:"He is self-employed; every hour here costs him money and he has a big job tomorrow.",keys:["work","job","tomorrow","worr","concern","money","rush"]},
+    {id:"alcohol",label:"He has a few beers on weekends (defensive if asked judgmentally).",keys:["alcohol","drink","beer","smok","habit","lifestyle"]}
+  ],
+  offline:{
+    greet:"Finally. Three hours. Three hours I've been sitting out there.",
+    say:{where:"Up here, right side. Usually after I eat, worse with anything greasy. Lasts a few hours.",duration:"On and off for about two months. Last night was the worst it's been.",vomit:"I threw up once last night. That's why I came in.",dismissed:"I went to a walk-in last month. They said 'just indigestion' and sent me home. Nobody listens.",job:"I work for myself. Every hour here is money I'm not making, and I've got a big job tomorrow.",alcohol:"A few beers on the weekend. Like everybody. Why, you think I'm a drunk?"},
+    vague:["It hurts. That's why I'm here.","Can we just get on with it?","I already told the nurse all this.","Look, I don't know. It just hurts."],
+    empathy:"…Yeah. Okay. Thanks for saying that. It's been a long night.",
+    jargon:"Can you say that in English?"
+  },
+  ladder:["relaxed","calm","guarded","frustrated","upset"], startLevel:3,
+  recap:"Daniel Reyes, 45, has abdominal pain and is frustrated after a three-hour wait. He feels dismissed and gives short answers until he feels heard."
+}
+];
+
+const STARTERS = ["Hi, I'm a student nurse. What brings you in today?","Can you tell me more about what you've been experiencing?","That sounds worrying. How has this been affecting you?","What questions do you have for me?"];
+
+/* ---------------- Patient generator data (offline fallback) ---------------- */
+const PALETTE = ["#0D6B70","#2C7439","#A65B08","#A93535","#4B5BA8","#7A4A9C","#2F6F9F","#8A6A12"];
+const NAMES = ["Priya Raman","Samuel Okoro","Grace Kim","Jamal Haddad","Elena Petrova","Marcus Bell","Aiko Tanaka","Fatima Noor","Liam O'Connor","Rosa Medina","Arjun Mehta","Hannah Weiss","Kofi Mensah","Sofia Rossi","Ben Carter","Mei Lin","Omar Farouk","Isabel Cruz","Noah Fischer","Ana Silva","Tariq Aziz","Chloe Martin","Yusuf Demir","Ingrid Larsen","Diego Morales","Amara Eze","Pavel Novak","Leila Karimi","George Whitfield","Thuy Pham"];
+const SETTINGS = { "Family clinic":"sits in the exam room, coat still on.", "Emergency department":"is on a trolley in a curtained cubicle, monitors beeping nearby.", "Hospital ward":"is sitting up in a ward bed, a meal tray pushed aside.", "Home visit":"sits in an armchair in their living room, a cup of tea going cold.", "Telehealth video call":"appears on a video call from their kitchen table, the camera slightly tilted." };
+// [id, chart label, first-person line, keywords]
+const COMPLAINTS = [
+ {c:"Persistent headaches", chart:[["BP","132/84"],["HR","78 bpm"],["Pain","6/10"]], f:[
+  ["onset","The headaches started about a month ago.","They started about a month ago, I think.",["when","start","how long","began"]],
+  ["pattern","They come most afternoons and get worse at a screen.","Mostly in the afternoons. Worse when I'm on the computer.",["pattern","worse","trigger","time of day","often","describe"]],
+  ["sleep","They are sleeping only about five hours a night.","I'm only sleeping about five hours a night lately.",["sleep","tired","rest","night"]],
+  ["meds","They take painkillers almost every day.","I take painkillers nearly every day now.",["medic","pill","painkiller","taking","tablet"]],
+  ["stress","A new role at work has been very stressful.","Work's been a lot. New role, lots of pressure.",["stress","work","job","life","going on"]],
+  ["fear","They fear it could be a brain tumor.","Honestly, I keep thinking it could be a tumor.",["worr","concern","afraid","scared","fear","think it"]]]},
+ {c:"Cough that won't go away", chart:[["Temp","37.4 °C"],["SpO₂","96 %"],["RR","18 /min"]], f:[
+  ["onset","The cough has lasted six weeks since a cold.","It's been about six weeks. Started with a cold.",["when","start","how long","began"]],
+  ["night","It is worse at night and keeps them awake.","It's worse at night. I hardly sleep.",["night","sleep","worse","when is"]],
+  ["smoke","They smoke about ten cigarettes a day.","I smoke, about ten a day. I know, I know.",["smok","cigarette","vape","habit","tobacco"]],
+  ["phlegm","They sometimes cough up yellow phlegm.","Sometimes there's yellow stuff when I cough.",["phlegm","mucus","bring up","cough up","sputum","describe"]],
+  ["work","They work in a dusty warehouse.","I work in a warehouse. It's pretty dusty.",["work","job","dust","exposure"]],
+  ["fear","Their father died of lung disease and they are scared.","My dad had lung problems. That's what scares me.",["worr","concern","afraid","scared","fear","family"]]]},
+ {c:"Trouble sleeping", chart:[["BP","126/80"],["HR","82 bpm"],["Weight","−3 kg in 2 months"]], f:[
+  ["pattern","They wake at 3 a.m. and cannot get back to sleep.","I wake up around three and just lie there.",["describe","pattern","wake","night","what happens"]],
+  ["onset","It began after a divorce four months ago.","It started… after my divorce. About four months ago.",["when","start","how long","began","happen","change"]],
+  ["mood","They feel flat and have stopped seeing friends.","I don't really see friends anymore. I just feel flat.",["mood","feel","friends","enjoy","sad","down"]],
+  ["alcohol","They drink two glasses of wine at night to fall asleep.","I have a couple of glasses of wine to help me sleep.",["alcohol","drink","wine","help you","tried"]],
+  ["caffeine","They drink four or five coffees a day to stay awake.","Lots of coffee. Four, five cups to get through the day.",["coffee","caffeine","day","energy"]],
+  ["work","They nearly made a serious mistake at work last week.","I almost made a big mistake at work last week. That's why I'm here.",["work","job","affect","impact","daily"]]]},
+ {c:"Lower back pain", chart:[["BP","138/86"],["HR","76 bpm"],["Pain","7/10"]], f:[
+  ["how","It started lifting a heavy box at home two weeks ago.","I lifted a box at home, two weeks ago. Felt something go.",["happen","how did","start","when","began"]],
+  ["leg","Pain sometimes shoots down the left leg.","Sometimes it shoots down my left leg.",["leg","spread","shoot","move","anywhere else","radiat"]],
+  ["work","They are a self-employed cleaner and can't afford time off.","I clean houses. If I don't work, I don't get paid.",["work","job","money","time off"]],
+  ["meds","They have been taking a friend's leftover strong painkillers.","My friend gave me some of her strong pain pills.",["medic","pill","taking","painkiller","tried"]],
+  ["sleep","They can only sleep in a chair.","I've been sleeping in the armchair. Bed's too painful.",["sleep","night","bed","rest"]],
+  ["fear","They are afraid of needing surgery.","I'm scared you'll say I need an operation.",["worr","concern","afraid","scared","fear"]]]},
+ {c:"Chest tightness on the stairs", chart:[["BP","148/92"],["HR","88 bpm"],["SpO₂","97 %"]], f:[
+  ["when","Tightness comes on climbing stairs and eases with rest.","It's when I climb stairs. Goes away if I stop.",["when","describe","what brings","trigger","happen"]],
+  ["onset","It started about three weeks ago.","Maybe three weeks now.",["how long","start","began","first"]],
+  ["family","Their brother had a heart attack at 52.","My brother had a heart attack. He was only fifty-two.",["family","brother","relative","run in"]],
+  ["meds","They stopped their blood pressure pills because of side effects.","I stopped my blood pressure pills. They made me feel funny.",["medic","pill","taking","blood pressure","tablet"]],
+  ["diet","They eat a lot of takeaway food since living alone.","Mostly takeaway since I live on my own.",["eat","food","diet","live","home"]],
+  ["delay","They waited because they didn't want to bother anyone.","I didn't want to bother anybody. It's probably nothing.",["why now","wait","didn't come","come in","worr","concern"]]]},
+ {c:"Itchy rash on the arms", chart:[["Temp","36.7 °C"],["HR","74 bpm"],["Duration","10 days"]], f:[
+  ["onset","The rash appeared ten days ago.","About ten days ago it showed up.",["when","start","how long","began"]],
+  ["product","They switched to a new laundry detergent recently.","I did change my washing powder a little while ago.",["new","change","product","soap","detergent","anything different"]],
+  ["itch","It itches badly at night.","It itches like crazy at night.",["itch","night","describe","feel","sleep"]],
+  ["work","They work with cleaning chemicals at a hotel.","I work housekeeping at a hotel. Lots of chemicals.",["work","job","chemical","glove","expos"]],
+  ["remedy","They have been putting a home herbal paste on it.","My mother made me a herbal paste. I've been using that.",["tried","put on","treat","cream","remed"]],
+  ["embarrassed","They feel embarrassed and wear long sleeves.","I wear long sleeves now. It's embarrassing.",["feel","embarrass","affect","worr","people"]]]},
+ {c:"Feeling tired all the time", chart:[["BP","118/74"],["HR","90 bpm"],["Hb (last)","10.8 g/dL"]], f:[
+  ["onset","They have felt exhausted for about three months.","About three months of feeling wiped out.",["when","start","how long","began"]],
+  ["periods","They have very heavy periods recently.","My periods have been really heavy lately.",["period","bleed","menstru","women"]],
+  ["diet","They became vegetarian last year.","I went vegetarian last year.",["eat","food","diet","meal"]],
+  ["breath","They get breathless walking uphill.","I get out of breath just walking up a hill.",["breath","exercise","walk","other symptom","anything else"]],
+  ["care","They care for a parent with dementia.","I look after my mum. She has dementia.",["home","family","care","life","going on","support"]],
+  ["fear","They worry they are just being lazy.","Part of me thinks I'm just being lazy.",["worr","concern","feel","think","afraid"]]]}
+];
+const PERSONALITIES = {
+ easy:{tag:["Baseline","base"], start:"calm", lvl:1, ladder:["relaxed","calm","calm","guarded","frustrated"], trait:"cooperative, calm and friendly; answers directly but does not volunteer everything unprompted", intro:"They are relaxed and cooperative.", challenge:"A straightforward visit. Practice a complete, well-structured conversation and explain next steps clearly.", tips:["Introduce yourself and your role.","Cover the full story, not just the main symptom.","Close by checking what they understood."], greet:"Hi, thanks for seeing me.", vague:["Sure, what else do you need?","Not much else to say, really.","Okay."], empathy:"Thanks, I appreciate that.", jargon:"Sorry, what does that mean in normal words?"},
+ anxious:{tag:["Anxiety","emo"], start:"anxious", lvl:3, ladder:["relaxed","calm","guarded","anxious","tearful"], trait:"anxious and worried, keeps asking whether it is serious, needs reassurance before opening up", intro:"They are visibly anxious and keep asking whether it's serious.", challenge:"Acknowledge the worry, stay calm, and gather the history without giving false reassurance.", tips:["Name the worry you notice.","Slow down and explain what you're doing.","Ask what they're most afraid of."], greet:"Hi. Sorry, I'm a bit nervous. Is this going to be bad news?", vague:["I don't know… is that bad?","Sorry, I'm all over the place.","It's hard to explain."], empathy:"Okay… thank you. That helps a bit.", jargon:"What does that mean? Is that bad?"},
+ frustrated:{tag:["Emotional distress","emo"], start:"frustrated", lvl:3, ladder:["relaxed","calm","guarded","frustrated","upset"], trait:"frustrated and curt after delays and feeling dismissed before; softens when sincerely acknowledged, defensive if judged", intro:"They are frustrated after a long wait and feel nobody listens.", challenge:"Acknowledge the frustration without getting defensive, rebuild trust, and still gather the history.", tips:["Acknowledge the wait or frustration first.","Don't argue or over-explain.","Ask lifestyle questions without judgment."], greet:"Finally. I've been waiting ages.", vague:["I already told the nurse all this.","Can we just get on with it?","It hurts. That's why I'm here."], empathy:"…Yeah. Okay. Thanks for saying that.", jargon:"Can you say that in plain English?"},
+ guarded:{tag:["Incomplete information",""], start:"guarded", lvl:2, ladder:["relaxed","calm","guarded","anxious","upset"], trait:"guarded and private, minimizes symptoms, gives short vague answers to closed questions, opens up only with patient open questions and trust", intro:"They are guarded, downplay their symptoms and give short answers.", challenge:"Build trust and use open, gentle questions to learn what is really going on.", tips:["Start open and let them tell it their way.","Follow up on vague answers.","Explain why you're asking personal questions."], greet:"Hello. It's probably nothing, really.", vague:["It's fine, mostly.","Not really.","I don't know. It comes and goes."], empathy:"…Thanks. I guess it has been bothering me.", jargon:"I don't know what that means."},
+ language:{tag:["Cultural & language","cult"], start:"confused", lvl:2, ladder:["relaxed","calm","confused","guarded","upset"], trait:"speaks English as a second language with short simple sentences, polite, says 'yes, yes' even when confused, unfamiliar with medical terms, values family input and traditional remedies", intro:"English is their second language and medical terms are unfamiliar to them.", challenge:"Use plain language, respect their beliefs and family role, and check what they actually understood.", tips:["Use plain words and short sentences.","Ask what they already believe about it.","Ask them to explain it back in their own words."], greet:"Hello, doctor. Yes. Thank you.", vague:["Yes, yes. Okay.","Yes… I understand.","Mm. Yes."], empathy:"Thank you. You are kind.", jargon:"Sorry… I do not know this word."},
+ tangent:{tag:["Unexpected responses",""], start:"calm", lvl:1, ladder:["relaxed","calm","guarded","anxious","frustrated"], trait:"chatty and friendly but wanders into long tangents about family and neighbors, and raises unexpected concerns", intro:"They are chatty and tend to wander off topic.", challenge:"Keep the conversation focused politely, summarize often, and catch the important details hidden in the tangents.", tips:["Redirect gently: “Can we come back to…”","Summarize what you've heard.","Listen for the detail inside the story."], greet:"Oh hello! My neighbor said you were very nice here.", vague:["Oh, where was I? My granddaughter was saying…","Anyway, that reminds me of my cousin.","Hm? Sorry, I got distracted."], empathy:"Oh, you're sweet. Thank you, dear.", jargon:"Goodness, what's that when it's at home?"}
+};
+const CHALLENGES = { "Any challenge":null, "Baseline (simple visit)":["easy"], "Incomplete information":["guarded"], "Emotional distress":["anxious","frustrated"], "Cultural & language":["language"], "Unexpected responses":["tangent"] };
+const DEMEANORS = ["relaxed","calm","relieved","guarded","hesitant","confused","anxious","frustrated","upset","tearful"];
+const rnd = a => a[Math.floor(Math.random()*a.length)];
+const newId = () => "p" + Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+const hashStr = s => [...s].reduce((h,c) => (h*31 + c.charCodeAt(0)) >>> 0, 7);
+
+function normalize(raw){
+  if (!raw || typeof raw !== "object") return null;
+  const str = (v, d="") => (typeof v === "string" && v.trim()) ? v.trim() : d;
+  const name = str(raw.name); if (!name) return null;
+  const used = new Set();
+  const facts = (Array.isArray(raw.facts) ? raw.facts : []).map((f, i) => {
+    if (!f || typeof f !== "object") return null;
+    const label = str(f.label); if (!label) return null;
+    let id = str(f.id, "f" + i).toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "f" + i;
+    while (used.has(id)) id += "x"; used.add(id);
+    let keys = (Array.isArray(f.keys) ? f.keys : []).map(k => String(k).toLowerCase().trim()).filter(Boolean).slice(0, 10);
+    if (!keys.length) keys = label.toLowerCase().split(/\W+/).filter(w => w.length > 4).slice(0, 4);
+    const say = str(f.say, str(raw.offline?.say?.[f.id], label));
+    return { id, label, keys, say };
+  }).filter(Boolean).slice(0, 8);
+  if (facts.length < 3) return null;
+  const o = raw.offline || {};
+  const arr = (v, d) => { const a = (Array.isArray(v) ? v : []).filter(x => typeof x === "string" && x.trim()); return a.length ? a : d; };
+  let start = str(raw.start, "guarded").toLowerCase(); if (!DEMEANORS.includes(start)) start = "guarded";
+  let ladder = Array.isArray(raw.ladder) && raw.ladder.length >= 3 ? raw.ladder.map(String) : null;
+  let startLevel = Number.isFinite(raw.startLevel) ? raw.startLevel : null;
+  if (!ladder || startLevel === null){
+    ladder = ["relaxed","calm","guarded","anxious","upset"];
+    const lvl = {relaxed:0,relieved:0,calm:1,guarded:2,hesitant:2,confused:2,anxious:3,frustrated:3,tearful:3,upset:4}[start];
+    if (lvl === 2) ladder[2] = start; if (lvl === 3) ladder[3] = start;
+    startLevel = lvl;
+  }
+  const KINDS = ["","base","emo","cult"];
+  const tags = (Array.isArray(raw.tags) ? raw.tags : []).map(t => Array.isArray(t) ? [str(t[0]), KINDS.includes(t[1]) ? t[1] : ""] : (t && typeof t === "object") ? [str(t.label), KINDS.includes(t.kind) ? t.kind : ""] : [str(t), ""]).filter(t => t[0]).slice(0, 3);
+  const chart = (Array.isArray(raw.chart) ? raw.chart : []).map(p => Array.isArray(p) ? [str(p[0]), str(String(p[1] ?? ""))] : (p && typeof p === "object") ? [str(p.label), str(String(p.value ?? ""))] : null).filter(p => p && p[0] && p[1]).slice(0, 6);
+  const age = Math.max(1, Math.min(105, parseInt(raw.age) || 40));
+  if (!chart.some(c => c[0].toLowerCase() === "age")) chart.unshift(["Age", String(age)]);
+  return {
+    id: /^[A-Za-z0-9-]{2,40}$/.test(raw.id || "") ? raw.id : newId(),
+    name, age,
+    complaint: str(raw.complaint, "General visit"),
+    tags: tags.length ? tags : [["Communication", ""]],
+    chart, setting: str(raw.setting, `${name.split(" ")[0]} is waiting in the exam room.`),
+    intro: str(raw.intro, `${name} has come in today.`),
+    challenge: str(raw.challenge, "Gather the history with clear, respectful communication."),
+    tips: arr(raw.tips, ["Start with an open question.","Respond to emotions.","Check understanding."]).slice(0, 3),
+    persona: str(raw.persona, `${name}, ${age}.`),
+    start, ladder, startLevel, facts,
+    offline: { greet: str(o.greet, "Hello."), vague: arr(o.vague, ["I'm not sure.","It's hard to say."]), empathy: str(o.empathy, "Thank you."), jargon: str(o.jargon, "Sorry, what does that mean?"), say: Object.fromEntries(facts.map(f => [f.id, f.say])) },
+    recap: str(raw.recap, `${name}, ${age}: ${str(raw.complaint, "general visit")}.`),
+    color: /^#[0-9a-f]{6}$/i.test(raw.color || "") ? raw.color : PALETTE[hashStr(name) % PALETTE.length],
+    initials: name.split(/\s+/).map(w => w[0]).join("").slice(0, 2).toUpperCase()
+  };
+}
+function storable(sc){
+  const { id, libId, createdAt, generated, ...rest } = sc;
+  return JSON.parse(JSON.stringify(rest));
+}
+
+function offlineGenerate(opt){
+  const keys = CHALLENGES[opt.challenge] || Object.keys(PERSONALITIES);
+  const pk = rnd(keys); const p = PERSONALITIES[pk];
+  const cmp = rnd(COMPLAINTS);
+  const taken = new Set(allPatients().map(s => s.name));
+  const name = rnd(NAMES.filter(n => !taken.has(n)).concat(NAMES.length <= taken.size ? NAMES : []));
+  const first = name.split(" ")[0];
+  const age = 20 + Math.floor(Math.random()*62);
+  const place = opt.setting === "Any setting" ? rnd(Object.keys(SETTINGS)) : opt.setting;
+  const hard = opt.difficulty === "Hard";
+  return normalize({
+    name, age, complaint: cmp.c,
+    tags: [p.tag],
+    chart: [["Age", String(age)], ["Visit", place], ...cmp.chart],
+    setting: `${first} ${SETTINGS[place]}`,
+    intro: `${first} has come in today. Main concern: ${cmp.c.toLowerCase()}. ${p.intro}`,
+    challenge: p.challenge + (hard ? " Expect strong reactions: details come out only when trust is built." : ""),
+    tips: p.tips,
+    persona: `${name}, ${age}, seen for ${cmp.c.toLowerCase()} (${place}). Personality: ${p.trait}.${hard ? " Difficulty HARD: emotions are strong and details are very slow to come out." : opt.difficulty === "Easy" ? " Difficulty EASY: shares details fairly readily when asked." : ""}`,
+    start: p.start, ladder: p.ladder, startLevel: p.lvl,
+    facts: cmp.f.map(([id, label, say, keys]) => ({ id, label: label.replace(/^They /, first + " ").replace(/^Their /, first + "'s "), say, keys })),
+    offline: { greet: p.greet, vague: p.vague, empathy: p.empathy, jargon: p.jargon },
+    recap: `${name}, ${age}, came in about ${cmp.c.toLowerCase()}. ${p.intro}`
+  });
+}
+
+function genPrompt(opt){
+  const existing = allPatients().slice(0, 40).map(s => `${s.name} (${s.complaint})`).join("; ");
+  const focus = opt.challenge === "Any challenge" ? "pick ONE of: incomplete information, emotional distress (anxiety, frustration, grief), cultural or language differences, unexpected responses, or a simple baseline visit" : opt.challenge;
+  return `Create ONE new FICTIONAL patient for a text-based communication-skills simulator used by medical and nursing students. The point is practicing communication (questioning, empathy, clarity, cultural respect), not diagnosing rare diseases, so use an everyday, realistic presenting problem.
+
+Communication challenge focus: ${focus}
+Care setting: ${opt.setting === "Any setting" ? "choose a fitting one (clinic, emergency department, hospital ward, home visit, or telehealth)" : opt.setting}
+Difficulty: ${opt.difficulty} (Easy = cooperative and shares readily; Medium = some barriers; Hard = strong emotions, very guarded, or a major communication barrier)
+Variety seed: ${Math.floor(Math.random()*1e6)}
+Make the person, name, age, background and complaint clearly different from these existing patients: ${existing || "none"}.
+Use a diverse, realistic full name. Everything must be fictional.
+
+Respond with ONLY a JSON object of this exact shape:
+{"name": "First Last", "age": 47, "complaint": "short presenting problem, 2-5 words",
+ "tags": [{"label": "Challenge label", "kind": "emo"}],  // 1-2 tags; kind is "base" for baseline, "emo" for emotional, "cult" for cultural/language, "" otherwise
+ "chart": [{"label": "Visit", "value": "setting name"}, {"label": "BP", "value": "128/82"}],  // 4-5 short items with realistic units
+ "setting": "one sentence describing how the patient appears as the student walks in",
+ "intro": "2 sentences: the patient's situation as the student would be told it",
+ "challenge": "1-2 sentences: the communication challenge and what the student should practice",
+ "tips": ["3 short things to try"],
+ "persona": "2-3 sentences: who they are, personality, how they talk, how they react to empathy vs being rushed",
+ "start": "starting demeanor: one of relaxed, calm, guarded, hesitant, confused, anxious, frustrated, upset, tearful",
+ "facts": [{"id": "short-id", "label": "hidden detail in third person", "say": "how the patient would say it, first person, 1-2 sentences, in character", "keys": ["5-8 lowercase word stems a student's question would contain to elicit this"]}],  // 5-7 hidden details incl. at least one emotional concern and one social/lifestyle detail
+ "offline": {"greet": "patient's first line in character", "vague": ["3-4 short vague answers in character"], "empathy": "reply when shown empathy", "jargon": "reply when confused by medical jargon"},
+ "recap": "1-2 sentence summary of the patient and communication challenge"}`;
+}
+
+/* ---------------- State ---------------- */
+const S = { gen:{busy:false,err:""}, genOpt:{challenge:"Any challenge",setting:"Any setting",difficulty:"Medium"}, saveMsg:null, q:"", confirmDel:false, view:"pick", sc:null, turns:[], log:[], revealed:new Set(), demeanor:"", level:0, busy:false, err:null, fb:null, fbNote:"", practiced:0, ctl:null, patientState:null, engineMsg:"", voiceBusy:false };
+const $view = document.getElementById("view");
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+/* ---------------- Storage helpers ---------------- */
+const store = kind => ({
+  get(k){ try { return window[kind].getItem(k); } catch { return null; } },
+  set(k, v){ try { v == null ? window[kind].removeItem(k) : window[kind].setItem(k, v); } catch {} }
+});
+const LS = store("localStorage");
+
+/* ---------------- On-device browser runtime ---------------- */
+const AI = { panelOpen: false };
+const runtime = new BrowserRuntime();
+let runtimeState = runtime.snapshot();
+runtime.subscribe(snapshot => {
+  runtimeState = snapshot;
+  updateMode();
+  if (AI.panelOpen) renderEngine();
+  if (S.view === "chat") updateVoiceControls();
+});
+installGlobalErrorBoundary(runtime);
+function activeEngine(){
+  if (runtimeState.models?.models?.llm?.state === "ready" && runtimeState.capabilities?.webgpu) return "local";
+  return "scripted";
+}
+function updateMode(){
+  const m = document.getElementById("mode"), t = document.getElementById("modeText");
+  if (!m) return;
+  m.classList.remove("live","off");
+  const e = activeEngine();
+  if (runtimeState.queue?.running){ m.classList.add("live"); t.textContent = `On-device ${runtimeState.queue.running} working…`; }
+  else if (e === "local"){ m.classList.add("live"); t.textContent = "On-device AI ready"; }
+  else { m.classList.add("off"); t.textContent = `${runtimeState.capabilities?.tier?.label || "Checking browser"} · model settings`; }
+  try { if (!S.gen.busy) renderGen(); } catch {}
+}
+
+/* ---------------- AI settings panel ---------------- */
+function renderEngine(){
+  updateMode();
+  const el = document.getElementById("enginePanel"); if (!el) return;
+  el.hidden = !AI.panelOpen;
+  if (!AI.panelOpen) return;
+  const caps = runtimeState.capabilities;
+  const recommended = new Set(caps?.tier?.models || []);
+  const modelRows = (runtimeState.models?.definitions || []).map(model => {
+    const status = runtimeState.models.models[model.id] || { state:"checking", progress:0 };
+    const busy = status.state === "downloading" || status.state === "repairing" || status.state === "checking";
+    const action = status.state === "ready" ? "remove" : status.state === "needs-repair" ? "repair" : "download";
+    const actionLabel = action === "remove" ? "Remove" : action === "repair" ? "Repair" : status.state === "error" ? "Retry" : "Download";
+    return `<div class="modelrow">
+      <div><b>${esc(model.label)}</b> ${recommended.has(model.id) ? `<span class="chip base">Recommended</span>` : ""}
+        <div class="small muted">${formatBytes(model.bytes)} · ${esc(status.state.replaceAll("-", " "))}</div>
+        ${busy ? `<div class="modelprogress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round(status.progress*100)}"><span style="width:${Math.round(status.progress*100)}%"></span></div>` : ""}
+        ${status.error ? `<div class="small" style="color:var(--bad)">${esc(status.error)}</div>` : ""}
+      </div>
+      <div class="btnrow"><button class="btn" data-model-action="${action}" data-model-id="${model.id}" ${busy ? "disabled" : ""}>${actionLabel}</button>${status.state === "ready" ? `<button class="link" data-model-action="repair" data-model-id="${model.id}">Verify</button>` : ""}</div>
+    </div>`;
+  }).join("");
+  el.innerHTML = `
+    <div class="sechead"><h2>On-device model settings</h2><button class="link" id="closeEngine">Close</button></div>
+    <p class="muted small">Models run only in this browser. Patient facts remain controlled by deterministic JavaScript even when the phrasing model is active.</p>
+    ${S.engineMsg ? `<p class="toast ${S.engineMsg.bad ? "bad" : ""}" role="status">${esc(S.engineMsg.text)}</p>` : ""}
+    ${runtimeState.notices?.length ? `<p class="toast" role="status">${esc(runtimeState.notices.at(-1).message)}</p>` : ""}
+    <div class="capgrid">
+      <div class="capitem"><span class="label">Performance tier</span><b>${esc(caps?.tier?.label || "Checking…")}</b></div>
+      <div class="capitem"><span class="label">WebGPU</span><b>${caps?.webgpu ? "Available" : "Unavailable"}</b></div>
+      <div class="capitem"><span class="label">Memory</span><b>${caps?.deviceMemoryGb ? `${caps.deviceMemoryGb} GB reported` : "Not reported"}</b></div>
+      <div class="capitem"><span class="label">Free browser storage</span><b>${formatBytes(caps?.availableStorageBytes)}</b></div>
+      <div class="capitem"><span class="label">Offline cache</span><b>${caps?.serviceWorker && caps?.cacheStorage ? "Available" : "Limited"}</b></div>
+      <div class="capitem"><span class="label">WASM isolation</span><b>${caps?.crossOriginIsolated ? "Multithread ready" : "Single-thread fallback"}</b></div>
+    </div>
+    <p class="note" style="margin-top:12px">${esc(caps?.tier?.reason || "Inspecting this browser…")}</p>
+    <div class="btnrow" style="margin-top:12px">
+      ${recommended.size ? `<button class="btn primary" id="downloadRecommended">Download recommended models</button>` : ""}
+      ${Object.values(runtimeState.models?.models || {}).some(x => x.state === "downloading" || x.state === "repairing") ? `<button class="btn" id="cancelDownload">Cancel download</button>` : ""}
+    </div>
+    <div class="settings">
+      <div class="setcard">
+        <h3>Model cache <span class="chip base">Private · persistent</span></h3>
+        <p class="small">Downloads are streamed, checked against the pinned SHA-256 manifest, and retained in browser storage. A failed or interrupted file is discarded and can be retried.</p>
+        ${modelRows || `<p class="muted">Loading the model manifest…</p>`}
+      </div>
+      <div class="setcard">
+        <h3>Compatibility guarantees</h3>
+        <p class="small">No WebGPU: scripted patient replies remain available. No Whisper: typed input remains available. No Kokoro: the system voice or text-only mode is used. A worker timeout restarts that worker without changing the authorized patient facts.</p>
+        <label class="small" style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="voiceEnabled" ${runtimeState.voiceEnabled ? "checked" : ""}> Speak patient replies when a voice is available</label>
+        <p class="small muted">Aggregate diagnostics: ${runtimeState.diagnostics?.encounters || 0} encounters; no transcript or recording telemetry.</p>
+      </div>
+    </div>`;
+  document.getElementById("closeEngine").onclick = () => { AI.panelOpen = false; renderEngine(); };
+  document.getElementById("voiceEnabled").onchange = event => runtime.setVoiceEnabled(event.target.checked);
+  document.getElementById("downloadRecommended")?.addEventListener("click", () => runEngineAction(() => runtime.downloadRecommended(), "Recommended models are ready."));
+  document.getElementById("cancelDownload")?.addEventListener("click", () => runtime.cancelDownload());
+  el.querySelectorAll("[data-model-action]").forEach(button => button.onclick = () => {
+    const id = button.dataset.modelId, action = button.dataset.modelAction;
+    if (action === "remove") return runEngineAction(() => runtime.removeModel(id), "Model removed.");
+    if (action === "repair") return runEngineAction(() => runtime.repairModel(id), "Model cache verified and repaired.");
+    return runEngineAction(() => runtime.downloadModel(id), "Model downloaded and verified.");
+  });
+}
+
+async function runEngineAction(action, success){
+  S.engineMsg = ""; renderEngine();
+  try { await action(); S.engineMsg = {text:success,bad:false}; }
+  catch(e){ if (e?.name !== "AbortError") S.engineMsg = {text:String(e?.message || e),bad:true}; }
+  renderEngine();
+}
+
+/* ---------------- My patients (stored on this device) + share links ---------------- */
+let LIB = [];
+const allPatients = () => [...SCENARIOS, ...LIB];
+function loadLib(){
+  try {
+    LIB = JSON.parse(LS.get("ps.library") || "[]").map(x => { const sc = normalize(x); if (sc){ sc.libId = sc.id; sc.createdAt = x.createdAt; } return sc; }).filter(Boolean);
+  } catch { LIB = []; }
+}
+function persistLib(){ LS.set("ps.library", JSON.stringify(LIB.map(sc => ({ ...storable(sc), id: sc.id, createdAt: sc.createdAt })))); }
+function addToLib(sc){
+  if (allPatients().some(p => p.id === sc.id)) return false;
+  sc.libId = sc.id; sc.createdAt = sc.createdAt || new Date().toISOString(); sc.generated = false; sc.shared = false;
+  LIB.unshift(sc); persistLib(); return true;
+}
+function saveToLibrary(){
+  addToLib(S.sc);
+  S.saveMsg = { text:"Saved to My patients on this device.", bad:false }; render();
+}
+function removeFromLibrary(){
+  LIB = LIB.filter(p => p.id !== S.sc.libId); persistLib();
+  S.view = "pick"; S.sc = null; render();
+}
+
+const b64u = bytes => btoa(String.fromCharCode(...bytes)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+const unb64u = s => Uint8Array.from(atob(s.replace(/-/g, "+").replace(/_/g, "/") + "===".slice((s.length + 3) % 4)), c => c.charCodeAt(0));
+async function pipe(bytes, stream){ return new Uint8Array(await new Response(new Blob([bytes]).stream().pipeThrough(stream)).arrayBuffer()); }
+async function encodePatient(sc){
+  const bytes = new TextEncoder().encode(JSON.stringify({ ...storable(sc), id: sc.id }));
+  if (window.CompressionStream){ try { return "p=" + b64u(await pipe(bytes, new CompressionStream("deflate-raw"))); } catch {} }
+  return "j=" + b64u(bytes);
+}
+async function decodePatient(h){
+  const [kind, data] = [h.slice(0, 2), h.slice(2)];
+  let bytes = unb64u(data);
+  if (kind === "p=") bytes = await pipe(bytes, new DecompressionStream("deflate-raw"));
+  return normalize(JSON.parse(new TextDecoder().decode(bytes)));
+}
+const baseUrl = () => location.href.split("#")[0];
+async function shareLink(sc){ return SCENARIOS.includes(sc) ? baseUrl() + "#" + sc.id : baseUrl() + "#" + await encodePatient(sc); }
+
+async function checkHash(){
+  const h = (location.hash || "").slice(1);
+  if (!h || (S.view !== "pick" && S.view !== "intro")) return;
+  let sc = allPatients().find(s => s.id === h);
+  if (!sc && /^[pj]=/.test(h)){
+    try {
+      const got = await decodePatient(h);
+      if (got){ sc = allPatients().find(s => s.id === got.id) || Object.assign(got, { shared:true }); }
+    } catch { S.saveMsg = null; }
+  }
+  if (sc){ S.sc = sc; S.saveMsg = null; S.confirmDel = false; S.view = "intro"; render(); }
+}
+window.addEventListener("hashchange", () => { if (S.view === "pick" || S.view === "intro"){ S.view = "pick"; checkHash(); } });
+
+function exportLibrary(){
+  const data = JSON.stringify({ app:"ai-patient-simulator", version:1, exported:new Date().toISOString(), patients: LIB.map(sc => ({ ...storable(sc), id: sc.id, createdAt: sc.createdAt })) }, null, 2);
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([data], { type:"application/json" }));
+  a.download = `patient-pack-${new Date().toISOString().slice(0,10)}.json`;
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+async function importLibrary(file){
+  let added = 0, total = 0;
+  try {
+    const j = JSON.parse(await file.text());
+    const list = Array.isArray(j) ? j : Array.isArray(j.patients) ? j.patients : [];
+    total = list.length;
+    list.forEach(x => { const sc = normalize(x); if (sc){ sc.createdAt = x.createdAt; if (addToLib(sc)) added++; } });
+    S.libMsg = { text: total ? `Added ${added} of ${total} patients${added < total ? " (the rest were already here or incomplete)" : ""}.` : "That file has no patients in it.", bad: !added };
+  } catch { S.libMsg = { text:"That file isn't a patient pack. Choose a .json file exported from this simulator.", bad:true }; }
+  render();
+}
+
+/* ---------------- Generate ---------------- */
+async function generatePatient(){
+  if (S.gen.busy) return;
+  const g = id => document.getElementById(id)?.value;
+  const opt = { challenge: g("gChallenge") || S.genOpt.challenge, setting: g("gSetting") || S.genOpt.setting, difficulty: g("gDifficulty") || S.genOpt.difficulty };
+  S.genOpt = opt;
+  S.gen = { busy:true, err:"" }; renderGen();
+  await new Promise(r => setTimeout(r, 100));
+  const sc = offlineGenerate(opt);
+  sc.generated = true;
+  S.gen = { busy:false, err:"" };
+  S.sc = sc; S.saveMsg = null; S.confirmDel = false; S.view = "intro"; render();
+}
+
+/* ---------------- Offline engine ---------------- */
+const JARGON = ["hypertension","hypotension","orthostatic","vertigo","syncope","glucose","a1c","hba1c","etiology","idiopathic","prn","bid","tid","metformin","glycemic","hyperglycemia","insulin resistance","cholecyst","biliary","gallstone","palpation","edema","ligament","inversion","nsaid","anterior","lateral","contraindicat","prognosis","benign","acute","chronic","diuretic","antihypertensive","renal","nephro","emesis","epigastric","ruq"];
+const EMPATHY = /(sorry|understand|must be|sounds (like|really|hard|frustrating|scary|stressful|worrying)|that'?s (hard|tough|understandable|frustrating)|take your time|it'?s (okay|ok) to|i hear you|thank you for (telling|sharing|waiting)|appreciate|no rush|makes sense)/i;
+const OPEN = /^(so,?\s*)?(how|what|tell me|can you (tell|describe|walk)|could you (tell|describe|walk)|why|describe|walk me|in what way)/i;
+const TEACHBACK = /(in your own words|what do you understand|tell me back|explain (it |that )?back|does that make sense|any questions|what questions|what did you understand|can you repeat)/i;
+const DISMISS = /(calm down|just relax|don'?t worry about it|it'?s nothing|hurry|quickly|we don'?t have time)/i;
+
+function offlineReply(sc, text){
+  const t = text.toLowerCase();
+  const o = sc.offline;
+  const parts = []; const revealed = [];
+  const cue = moodUpdate(sc, text);
+  if (S.log.filter(m => m.who === "me").length === 1 && /\b(hi|hello|good (morning|afternoon|evening)|my name)\b/i.test(text)) parts.push(o.greet);
+  if (EMPATHY.test(text)) parts.push(o.empathy);
+  if (JARGON.some(j => t.includes(j))) parts.push(o.jargon);
+  const isOpen = OPEN.test(text.trim()) || /tell me more/i.test(text);
+  const hits = sc.facts.filter(f => !S.revealed.has(f.id) && f.keys.some(k => t.includes(k)));
+  const take = hits.slice(0, isOpen ? 2 : 1);
+  take.forEach(f => { parts.push(o.say[f.id]); revealed.push(f.id); });
+  if (!take.length && !parts.length){
+    const again = sc.facts.find(f => S.revealed.has(f.id) && f.keys.some(k => t.includes(k)));
+    parts.push(again ? "Like I said, " + o.say[again.id].charAt(0).toLowerCase() + o.say[again.id].slice(1) : o.vague[S.log.length % o.vague.length]);
+  }
+  return { reply: parts.join(" "), demeanor: sc.ladder[Math.round(S.level)], cue, revealed };
+}
+function moodUpdate(sc, text){
+  let delta = 0, cue = "";
+  if (EMPATHY.test(text)){ delta -= 1; cue = "relaxes a little"; }
+  if (DISMISS.test(text)){ delta += 1; cue = "frowns"; }
+  if (JARGON.some(j => text.toLowerCase().includes(j))){ delta += 0.5; cue = "looks confused"; }
+  S.level = Math.max(0, Math.min(sc.ladder.length - 1, S.level + delta));
+  return cue;
+}
+
+function offlineFeedback(sc){
+  const mine = S.log.filter(m => m.who === "me").map(m => m.text);
+  const pick = re => mine.find(m => re.test(m.trim()));
+  const open = pick(OPEN) || mine.find(m => /tell me more/i.test(m));
+  const emp = pick(EMPATHY), tb = pick(TEACHBACK);
+  const jargon = [...new Set(mine.flatMap(m => JARGON.filter(j => m.toLowerCase().includes(j))))];
+  const missedFacts = sc.facts.filter(f => !S.revealed.has(f.id));
+  const strengths = [], improvements = [];
+  if (open) strengths.push({point:"You used open-ended questions that invited the patient to talk.", example:open});
+  if (emp) strengths.push({point:"You acknowledged the patient's feelings.", example:emp});
+  if (tb) strengths.push({point:"You checked the patient's understanding.", example:tb});
+  if (S.revealed.size >= Math.ceil(sc.facts.length / 2)) strengths.push({point:`You uncovered ${S.revealed.size} of ${sc.facts.length} key details.`, example:""});
+  if (!strengths.length) strengths.push({point:"You started the conversation and stayed engaged with the patient.", example:mine[0] || ""});
+  if (!open) improvements.push({point:"Use more open-ended questions.", suggestion:"Try “Can you tell me more about what you've been experiencing?” before narrowing down."});
+  if (!emp) improvements.push({point:"Respond to the patient's emotions.", suggestion:"Name what you notice, e.g. “It sounds like this has been worrying you.”"});
+  if (jargon.length) improvements.push({point:"Avoid unexplained medical terms.", suggestion:`You used: ${jargon.join(", ")}. Swap in plain words or explain each term.`});
+  if (!tb) improvements.push({point:"Check what the patient understood.", suggestion:"Ask “Can you tell me in your own words what we talked about?”"});
+  if (missedFacts.length) improvements.push({point:"Ask more follow-up questions.", suggestion:"When an answer is vague, follow it with “What do you mean by…?” or “What else?”"});
+  return {
+    recap: sc.recap,
+    strengths: strengths.slice(0, 3),
+    improvements: improvements.slice(0, 3),
+    missed: missedFacts.map(f => f.label),
+    nextStep: improvements.length ? `On your next try, focus on this: ${improvements[0].point.toLowerCase()}` : "Try a scenario with a different communication challenge."
+  };
+}
+
+/* ---------------- Views ---------------- */
+function setStep(n){
+  document.querySelectorAll("#rail li").forEach(li => {
+    const s = +li.dataset.s;
+    const on = Array.isArray(n) ? n.includes(s) : s === n;
+    const max = Array.isArray(n) ? Math.min(...n) : n;
+    li.classList.toggle("on", on);
+    li.classList.toggle("done", !on && s < max);
+    if (on) li.setAttribute("aria-current","step"); else li.removeAttribute("aria-current");
+  });
+  document.getElementById("loopnote").hidden = !Array.isArray(n);
+}
+
+const tagHtml = sc => `<div class="chips">${sc.tags.map(([t,c]) => `<span class="chip ${c}">${esc(t)}</span>`).join("")}</div>`;
+const avHtml = sc => `<span class="av" style="background:${sc.color}" aria-hidden="true">${sc.initials}</span>`;
+
+function render(){
+  if (S.view === "pick") return viewPick();
+  if (S.view === "intro") return viewIntro();
+  if (S.view === "chat") return viewChat();
+  if (S.view === "feedback") return viewFeedback();
+  if (S.view === "done") return viewDone();
+}
+
+const cardHtml = sc => `
+      <button class="card" data-id="${esc(sc.id)}">
+        <span class="who">${avHtml(sc)}<span><h3>${esc(sc.name)}, ${sc.age}</h3><span class="muted">${esc(sc.complaint)}</span></span></span>
+        ${tagHtml(sc)}
+        <span class="vitals">${sc.chart.filter(c => c[0] !== "Age").slice(1,4).map(([k,v]) => `<span>${esc(k)} <b>${esc(v)}</b></span>`).join("")}</span>
+        ${sc.createdAt ? `<span class="meta">Added ${esc(new Date(sc.createdAt).toLocaleDateString(undefined,{month:"short",day:"numeric",year:"numeric"}))}</span>` : ""}
+      </button>`;
+const opts = (obj, cur) => Object.keys(obj).map(k => `<option${k === cur ? " selected" : ""}>${esc(k)}</option>`).join("");
+
+function viewPick(){
+  setStep(1);
+  const g = S.genOpt;
+  const recommended = runtimeState.capabilities?.tier?.models || [];
+  const missingModels = recommended.filter(id => runtimeState.models?.models?.[id]?.state !== "ready");
+  const banner = missingModels.length ? `
+    <div class="banner"><p><b>Optional voice and on-device AI are not ready yet.</b> The simulator works now in scripted, typed compatibility mode. Download the recommended models once for speech and natural phrasing.</p>
+    <button class="btn primary" id="openEngine2">Set up on-device models</button></div>` : "";
+  $view.innerHTML = `
+    ${banner}
+    <div class="pickhead">
+      <h2>Choose a patient</h2>
+      <p class="muted">Generate a brand-new patient any time, pick a preset patient, or open one you've saved.</p>
+    </div>
+    <div class="gen">
+      <div class="sechead"><h3>New patient generator</h3><span class="small muted">A different fictional patient every time</span></div>
+      <div class="genrow">
+        <div class="field"><label class="label" for="gChallenge">Challenge</label><select id="gChallenge">${opts(CHALLENGES, g.challenge)}</select></div>
+        <div class="field"><label class="label" for="gSetting">Setting</label><select id="gSetting">${opts({"Any setting":1, ...SETTINGS}, g.setting)}</select></div>
+        <div class="field"><label class="label" for="gDifficulty">Difficulty</label><select id="gDifficulty">${opts({Easy:1,Medium:1,Hard:1}, g.difficulty)}</select></div>
+      </div>
+      <div id="genStatus"></div>
+    </div>
+
+    <div class="section">
+      <div class="sechead"><h3>Preset patients</h3><span class="small muted">${SCENARIOS.length} core scenarios</span></div>
+      <div class="grid">${SCENARIOS.map(cardHtml).join("")}</div>
+    </div>
+
+    <div class="section">
+      <div class="sechead"><h3>My patients</h3><span class="small muted" id="libCount"></span></div>
+      <div style="display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end">
+        <div class="field" style="flex:1 1 220px;max-width:360px"><label class="label" for="libSearch">Search</label><input type="search" id="libSearch" placeholder="Name, concern or challenge" value="${esc(S.q)}"></div>
+        <div class="btnrow">
+          <button class="btn" id="exportBtn" ${LIB.length ? "" : "disabled"}>Export patient pack</button>
+          <label class="btn" for="importFile" style="cursor:pointer">Import patient pack</label>
+          <input type="file" id="importFile" accept=".json,application/json" hidden>
+        </div>
+      </div>
+      ${S.libMsg ? `<p class="toast ${S.libMsg.bad ? "bad" : ""}" role="status">${esc(S.libMsg.text)}</p>` : ""}
+      <div id="lib"></div>
+    </div>`;
+  renderGen();
+  refreshLib();
+  ["gChallenge","gSetting","gDifficulty"].forEach(id => document.getElementById(id).onchange = () => { S.genOpt = { challenge:gChallenge.value, setting:gSetting.value, difficulty:gDifficulty.value }; });
+  document.getElementById("libSearch").oninput = ev => { S.q = ev.target.value; refreshLib(); };
+  document.getElementById("exportBtn").onclick = exportLibrary;
+  document.getElementById("importFile").onchange = ev => { const f = ev.target.files[0]; if (f) importLibrary(f); };
+  document.getElementById("openEngine2")?.addEventListener("click", openEngine);
+  bindCards($view);
+}
+function openEngine(){ AI.panelOpen = true; renderEngine(); document.getElementById("enginePanel").scrollIntoView({ behavior:"smooth", block:"start" }); }
+function bindCards(root){
+  root.querySelectorAll(".card").forEach(b => b.onclick = () => { const sc = allPatients().find(s => s.id === b.dataset.id); if (!sc) return; S.sc = sc; S.saveMsg = null; S.confirmDel = false; S.view = "intro"; render(); });
+}
+function renderGen(){
+  const el = document.getElementById("genStatus"); if (!el) return;
+  if (S.gen.busy){
+    el.innerHTML = `<div class="genstatus"><span class="pulse"></span><span>Creating a new patient…</span></div>`;
+  } else {
+    const combos = COMPLAINTS.length * Object.keys(PERSONALITIES).length;
+    el.innerHTML = `<div class="btnrow"><button class="btn primary" id="genBtn">Generate patient</button></div>
+      <p class="small muted" style="margin-top:8px">New patients are built locally from ${combos} case and personality combinations with random names, ages and settings.</p>`;
+    document.getElementById("genBtn").onclick = generatePatient;
+  }
+}
+function refreshLib(){
+  const el = document.getElementById("lib"); if (!el) return;
+  const q = S.q.trim().toLowerCase();
+  const list = q ? LIB.filter(s => [s.name, s.complaint, ...s.tags.map(t => t[0])].join(" ").toLowerCase().includes(q)) : LIB;
+  document.getElementById("libCount").textContent = `${LIB.length} saved on this device`;
+  el.innerHTML = !LIB.length ? `<p class="empty">No saved patients yet. Generate a patient and press <b>Save to My patients</b>, or import a patient pack from your instructor or group.</p>`
+    : !list.length ? `<p class="empty">No saved patients match “${esc(S.q)}”.</p>`
+    : `<div class="grid">${list.map(cardHtml).join("")}</div>`;
+  bindCards(el);
+}
+
+function viewIntro(){
+  const sc = S.sc; setStep(2);
+  const first = sc.name.split(" ")[0];
+  $view.innerHTML = `
+    <div class="intro">
+      <div class="body">
+        <div class="who">${avHtml(sc)}<div><h2>${esc(sc.name)}</h2><span class="muted">${esc(sc.complaint)}</span></div></div>
+        <div class="chips">${sc.generated ? `<span class="chip new">New · not saved</span>` : ""}${sc.shared ? `<span class="chip new">Shared with you</span>` : ""}${sc.tags.map(([t,c]) => `<span class="chip ${c}">${esc(t)}</span>`).join("")}</div>
+        <p>${esc(sc.intro)}</p>
+        <div class="challenge"><span class="label">Communication challenge</span><p>${esc(sc.challenge)}</p></div>
+        <div><span class="label">Things to try</span><ul class="tips">${sc.tips.map(t => `<li>${esc(t)}</li>`).join("")}</ul></div>
+        <div class="btnrow">
+          <button class="btn primary" id="begin">Begin conversation</button>
+          ${sc.generated ? `<button class="btn" id="another">Generate another</button>` : ""}
+          <button class="btn" id="back">Back to all patients</button>
+        </div>
+      </div>
+      <aside class="chart" aria-label="Patient chart">
+        <span class="label">Chart snapshot</span>
+        <dl>${sc.chart.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl>
+        <p class="muted" style="font-size:.85rem">The patient will only share more when you ask. They won't give hints during the conversation.</p>
+        <div style="display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:12px">
+          <span class="label">Save and share</span>
+          ${(sc.generated || sc.shared) ? `<button class="btn" id="save">Save to My patients</button>` : ""}
+          <div class="linkbox"><input id="plink" readonly value="" aria-label="Link to this patient"><button class="btn" id="copy">Copy link</button></div>
+          <span class="small muted">Anyone who opens this link goes straight to ${esc(first)}, even if they've never used this page.</span>
+          ${sc.libId ? (S.confirmDel ? `<div class="btnrow"><button class="btn" id="delYes" style="color:var(--bad)">Remove</button><button class="btn" id="delNo">Keep</button></div>` : `<button class="link" id="del" style="color:var(--bad);align-self:flex-start">Remove from My patients</button>`) : ""}
+          ${S.saveMsg ? `<span class="toast ${S.saveMsg.bad ? "bad" : ""}" role="status">${esc(S.saveMsg.text)}</span>` : ""}
+        </div>
+      </aside>
+    </div>`;
+  shareLink(sc).then(l => { const i = document.getElementById("plink"); if (i && S.sc === sc) i.value = l; });
+  document.getElementById("begin").onclick = startChat;
+  document.getElementById("back").onclick = () => { S.view = "pick"; S.saveMsg = null; S.libMsg = null; try { history.replaceState(null, "", baseUrl()); } catch {} render(); };
+  document.getElementById("another")?.addEventListener("click", () => { S.view = "pick"; render(); generatePatient(); });
+  document.getElementById("save")?.addEventListener("click", saveToLibrary);
+  document.getElementById("del")?.addEventListener("click", () => { S.confirmDel = true; render(); });
+  document.getElementById("delNo")?.addEventListener("click", () => { S.confirmDel = false; render(); });
+  document.getElementById("delYes")?.addEventListener("click", () => { S.confirmDel = false; removeFromLibrary(); });
+  document.getElementById("copy").addEventListener("click", async () => {
+    const link = await shareLink(sc);
+    const done = ok => { S.saveMsg = { text: ok ? "Link copied." : "Select the link and copy it.", bad:false }; render(); if (!ok) setTimeout(() => { const i = document.getElementById("plink"); i?.focus(); i?.select(); }, 50); };
+    try { await navigator.clipboard.writeText(link); done(true); } catch { done(false); }
+  });
+}
+
+function startChat(){
+  const sc = S.sc;
+  Object.assign(S, { view:"chat", turns:[], log:[], revealed:new Set(), demeanor:sc.start, level:sc.startLevel, busy:false, err:null, fb:null, fbNote:"", patientState:createPatientState(sc), voiceBusy:false });
+  runtime.clearRecording();
+  render();
+  document.getElementById("msg")?.focus();
+}
+
+function viewChat(){
+  const sc = S.sc; setStep([3,4]);
+  const studentCount = S.log.filter(m => m.who === "me").length;
+  $view.innerHTML = `
+    <div class="chatwrap">
+      <aside class="side">
+        <div class="who">${avHtml(sc)}<div><h3>${esc(sc.name)}, ${sc.age}</h3><span class="muted" style="font-size:.9rem">${esc(sc.complaint)}</span></div></div>
+        <div class="demeanor"><span class="label">Demeanor</span><span class="dm ${esc(S.demeanor)}" id="dm">${esc(S.demeanor)}</span></div>
+        <div class="chart" style="padding:12px"><dl>${sc.chart.map(([k,v]) => `<dt>${esc(k)}</dt><dd>${esc(v)}</dd>`).join("")}</dl></div>
+        <p class="note">Challenge: ${esc(sc.challenge)}</p>
+        <button class="btn warm" id="end" ${studentCount && !S.busy ? "" : "disabled"}>End conversation &amp; get feedback</button>
+        ${studentCount ? "" : `<p class="note">Send at least one message to end the conversation.</p>`}
+      </aside>
+      <section class="convo" aria-label="Conversation">
+        <div class="log" id="log" aria-live="polite">
+          <p class="setting">${esc(sc.setting)}</p>
+          ${S.log.map(m => `<div class="msg ${m.who}">
+              <span class="who2">${m.who === "me" ? "You" : esc(sc.name.split(" ")[0])}</span>
+              <div class="bubble">${esc(m.text)}</div>
+              ${m.cue ? `<span class="cue">${esc(sc.name.split(" ")[0])} ${esc(m.cue)}</span>` : ""}
+            </div>`).join("")}
+          ${S.busy ? `<p class="typing">${esc(sc.name.split(" ")[0])} is responding…</p>` : ""}
+          ${S.err ? `<div class="err" role="alert"><span>${esc(S.err)}</span><button class="link" id="retry">Try again</button></div>` : ""}
+        </div>
+        ${studentCount ? "" : `<div class="starters" aria-label="Example openers">${STARTERS.slice(0,2).map(s => `<button class="starter">${esc(s)}</button>`).join("")}</div>`}
+        <div class="voicebar" id="voicebar">
+          <button class="btn" id="recordButton" type="button">Start push-to-talk</button>
+          <button class="link" id="retryTranscript" type="button" hidden>Retry transcription</button>
+          <span class="small muted" id="voiceStatus">Checking voice capabilities…</span>
+          <label class="small"><input type="checkbox" id="chatVoiceEnabled" ${runtimeState.voiceEnabled ? "checked" : ""}> Speak replies</label>
+          <button class="link" id="chatModelSettings" type="button">Model settings</button>
+        </div>
+        ${runtimeState.notices?.length ? `<p class="note" role="status">${esc(runtimeState.notices.at(-1).message)}</p>` : ""}
+        <form class="compose" id="compose">
+          <label for="msg" class="label" hidden>Your message</label>
+          <textarea id="msg" rows="1" placeholder="Type what you'd say to ${esc(sc.name.split(" ")[0])}…" ${S.busy ? "disabled" : ""}></textarea>
+          <button class="btn primary" type="submit" ${S.busy ? "disabled" : ""}>Send</button>
+        </form>
+      </section>
+    </div>`;
+  const log = document.getElementById("log"); log.scrollTop = log.scrollHeight;
+  const ta = document.getElementById("msg");
+  ta.value = S.draft || "";
+  ta.oninput = () => { S.draft = ta.value; ta.style.height = "auto"; ta.style.height = Math.min(ta.scrollHeight, 140) + "px"; };
+  ta.onkeydown = e => { if (e.key === "Enter" && !e.shiftKey){ e.preventDefault(); send(); } };
+  document.getElementById("compose").onsubmit = e => { e.preventDefault(); send(); };
+  document.getElementById("end").onclick = endConversation;
+  document.getElementById("retry")?.addEventListener("click", () => { S.err = null; askPatient(); });
+  document.getElementById("recordButton").onclick = toggleRecording;
+  document.getElementById("retryTranscript").onclick = retryTranscription;
+  document.getElementById("chatVoiceEnabled").onchange = event => runtime.setVoiceEnabled(event.target.checked);
+  document.getElementById("chatModelSettings").onclick = openEngine;
+  $view.querySelectorAll(".starter").forEach(b => b.onclick = () => { ta.value = b.textContent; S.draft = ta.value; ta.focus(); });
+  updateVoiceControls();
+  if (!S.busy) ta.focus({preventScroll:true});
+}
+
+function updateVoiceControls(){
+  const button = document.getElementById("recordButton"), status = document.getElementById("voiceStatus"), retry = document.getElementById("retryTranscript");
+  if (!button || !status) return;
+  const sttReady = runtimeState.models?.models?.stt?.state === "ready";
+  const canRecord = Boolean(runtimeState.capabilities?.microphone && runtimeState.capabilities?.audioWorklet && sttReady);
+  button.textContent = runtimeState.recording ? "Stop and transcribe" : "Start push-to-talk";
+  button.classList.toggle("recording", runtimeState.recording);
+  button.disabled = S.busy || S.voiceBusy || (!runtimeState.recording && !canRecord);
+  retry.hidden = !runtimeState.hasRecording || runtimeState.recording;
+  retry.disabled = S.voiceBusy || !sttReady;
+  const voiceToggle = document.getElementById("chatVoiceEnabled"); if (voiceToggle) voiceToggle.checked = runtimeState.voiceEnabled;
+  status.textContent = runtimeState.recording ? "Recording locally… press Stop when finished."
+    : S.voiceBusy ? "Transcribing on this device…"
+    : runtimeState.hasRecording ? "Recording retained until you send or record again."
+    : canRecord ? "Speak, then edit the transcript before sending."
+    : !sttReady ? "Typed input is ready. Download Whisper in Model settings for speech input."
+    : "This browser cannot record through AudioWorklet; use typed input.";
+}
+
+async function toggleRecording(){
+  if (S.voiceBusy) return;
+  S.err = null;
+  try {
+    if (!runtimeState.recording){
+      await runtime.startRecording();
+      updateVoiceControls();
+      return;
+    }
+    S.voiceBusy = true; updateVoiceControls();
+    const result = await runtime.stopAndTranscribe();
+    S.voiceBusy = false;
+    if (!result.text) S.err = "No speech was recognized. Your recording is retained; retry or type the message.";
+    else S.draft = result.text;
+    render();
+  } catch(e){
+    S.voiceBusy = false;
+    S.err = `${String(e?.message || e)} Typed input remains available${runtimeState.hasRecording ? ", and your recording is retained." : "."}`;
+    render();
+  }
+}
+
+async function retryTranscription(){
+  if (S.voiceBusy || !runtimeState.hasRecording) return;
+  S.voiceBusy = true; S.err = null; updateVoiceControls();
+  try {
+    const result = await runtime.transcribeLastRecording();
+    S.voiceBusy = false;
+    if (result.text) S.draft = result.text; else S.err = "No speech was recognized. Edit the text manually or record again.";
+  } catch(e){
+    S.voiceBusy = false; S.err = `${String(e?.message || e)} Your recording is retained.`;
+  }
+  render();
+}
+
+function send(){
+  const ta = document.getElementById("msg");
+  const text = ta.value.trim();
+  if (!text || S.busy) return;
+  S.draft = ""; S.err = null;
+  runtime.clearRecording();
+  S.log.push({ who:"me", text });
+  S.turns.push({ role:"user", content:"Student: " + text });
+  void askPatient();
+}
+
+async function askPatient(){
+  const sc = S.sc; const lastText = S.log.filter(m => m.who === "me").at(-1).text;
+  S.busy = true; render();
+  let plan, out;
+  try {
+    plan = planPatientTurn(sc, S.patientState, lastText);
+    const generated = await runtime.phrase(plan);
+    const checked = generated.source === "llm" ? validatePhrasedReply(generated.text, plan, sc) : {ok:true,text:plan.scriptedReply};
+    out = { reply:checked.ok ? checked.text : plan.scriptedReply, demeanor:plan.demeanor, cue:plan.nonverbalCue, revealed:plan.authorizedFactIds };
+    if (!out || typeof out.reply !== "string" || !out.reply.trim()) throw { code:"empty" };
+  } catch(e){
+    if (plan) out = {reply:plan.scriptedReply,demeanor:plan.demeanor,cue:plan.nonverbalCue,revealed:plan.authorizedFactIds};
+    else { S.busy = false; S.err = "The patient controller could not complete this turn. Try again."; render(); return; }
+  }
+  const ids = Array.isArray(out.revealed) ? out.revealed.map(String).filter(id => sc.facts.some(f => f.id === id)) : [];
+  ids.forEach(id => S.revealed.add(id));
+  const dem = String(out.demeanor || S.demeanor).toLowerCase().split(/[^a-z]/)[0] || S.demeanor;
+  const clean = { reply:out.reply.trim(), demeanor:dem, cue:String(out.cue || "").trim(), revealed:ids };
+  S.patientState = plan.nextState;
+  S.level = plan.nextState.level;
+  S.demeanor = dem;
+  S.turns.push({ role:"assistant", content:JSON.stringify(clean) });
+  S.log.push({ who:"pt", text:clean.reply, cue:clean.cue.replace(/^(he|she|they)\s+/i, "") });
+  S.busy = false; render();
+  void runtime.speak(clean.reply, {demeanor:clean.demeanor}).catch(() => {});
+}
+
+async function endConversation(){
+  S.view = "feedback"; S.fb = null; S.fbNote = ""; S.practiced++;
+  render();
+  const sc = S.sc;
+  await new Promise(resolve => setTimeout(resolve, 50));
+  S.fb = offlineFeedback(sc);
+  S.fbNote = "This privacy-preserving summary comes from deterministic checks on your messages and the controller-authorized fact IDs.";
+  runtime.encounterComplete();
+  if (S.view === "feedback") render();
+}
+
+function viewFeedback(){
+  const sc = S.sc; setStep(S.fb ? [5,6] : 5);
+  if (!S.fb){
+    $view.innerHTML = `<div class="loading"><span class="label">Step 5 · Feedback</span><h2>Stepping out of the patient role…</h2><p class="muted">Reviewing your conversation with ${esc(sc.name)}. This can take up to a minute.</p><span class="pulse"></span></div>`;
+    return;
+  }
+  const fb = S.fb;
+  const list = (arr, fn) => arr && arr.length ? `<ul>${arr.map(fn).join("")}</ul>` : `<p class="muted">Nothing to list.</p>`;
+  $view.innerHTML = `
+    <div class="fbhead">
+      <div class="who">${avHtml(sc)}<div><span class="label">Feedback summary</span><h2>Your conversation with ${esc(sc.name)}</h2></div></div>
+      <span class="mono muted" style="font-size:.85rem">${S.log.filter(m => m.who === "me").length} messages · ${S.revealed.size}/${sc.facts.length} details found</span>
+    </div>
+    <div class="fbsections">
+      <div class="fbsec"><span class="num">01</span><div><h3>Scenario recap</h3><p>${esc(fb.recap)}</p></div></div>
+      <div class="fbsec"><span class="num">02</span><div><h3>Communication strengths</h3>${list(fb.strengths, x => `<li>${esc(x.point)}${x.example ? `<span class="quote">“${esc(x.example)}”</span>` : ""}</li>`)}</div></div>
+      <div class="fbsec"><span class="num">03</span><div><h3>Areas for improvement</h3>${list(fb.improvements, x => `<li>${esc(x.point)}${x.suggestion ? `<span class="quote">${esc(x.suggestion)}</span>` : ""}</li>`)}</div></div>
+      <div class="fbsec"><span class="num">04</span><div><h3>Missed information</h3>${fb.missed && fb.missed.length ? list(fb.missed, x => `<li>${esc(x)}</li>`) : `<p>You uncovered everything ${esc(sc.name.split(" ")[0])} was willing to share.</p>`}</div></div>
+      <div class="fbsec"><span class="num">05</span><div><h3>Next step</h3><p class="next">${esc(fb.nextStep)}</p></div></div>
+    </div>
+    ${S.fbNote ? `<p class="note" style="margin-top:8px">${esc(S.fbNote)}</p>` : ""}
+    <div style="margin-top:20px;display:flex;flex-direction:column;gap:10px">
+      <span class="label">Step 6 · Practice again or finish</span>
+      <div class="btnrow">
+        <button class="btn primary" id="retrySc">Retry with ${esc(sc.name.split(" ")[0])}</button>
+        <button class="btn" id="newSc">Choose a new scenario</button>
+        <button class="btn" id="finish">Finish session</button>
+      </div>
+    </div>
+    <details class="transcript"><summary>Show transcript</summary>
+      <div class="tx">${S.log.map(m => `<p><b>${m.who === "me" ? "YOU" : esc(sc.name.split(" ")[0].toUpperCase())}</b>${esc(m.text)}</p>`).join("")}</div>
+    </details>`;
+  document.getElementById("retrySc").onclick = startChat;
+  document.getElementById("newSc").onclick = () => { S.view = "pick"; render(); };
+  document.getElementById("finish").onclick = () => { S.view = "done"; render(); };
+}
+
+function viewDone(){
+  setStep(6);
+  document.querySelectorAll("#rail li").forEach(li => li.classList.add("done"));
+  $view.innerHTML = `
+    <div class="done">
+      <span class="label">Session complete</span>
+      <h2>Nice work today.</h2>
+      <p>You practiced ${S.practiced} conversation${S.practiced === 1 ? "" : "s"} this session. Nothing was saved: your transcripts and feedback are cleared when you leave this page.</p>
+      <button class="btn primary" id="again">Start a new session</button>
+    </div>`;
+  document.getElementById("again").onclick = () => { S.practiced = 0; S.view = "pick"; render(); };
+}
+
+loadLib();
+document.getElementById("mode").onclick = () => { AI.panelOpen = !AI.panelOpen; renderEngine(); };
+render();
+renderEngine();
+checkHash();
+void runtime.initialize().catch(error => {
+  S.engineMsg = {text:`Browser runtime setup failed: ${String(error?.message || error)} Compatibility mode remains available.`,bad:true};
+  updateMode();
+});
+window.addEventListener("pagehide", () => runtime.dispose(), {once:true});
+</script>
+</body>
+</html>
